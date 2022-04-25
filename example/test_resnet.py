@@ -27,8 +27,8 @@ if __name__ == '__main__':
     net = get_network(args)
 
     mnist_test_loader = get_test_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+        settings.MNIST_TRAIN_MEAN,
+        settings.MNIST_TRAIN_STD,
         #settings.CIFAR100_PATH,
         num_workers=4,
         batch_size=args.b,
@@ -70,6 +70,10 @@ if __name__ == '__main__':
         print(torch.cuda.memory_summary(), end='')
 
     print()
+
+    print("Top 1 correct: ", correct_1 / len(mnist_test_loader.dataset))
+    print("Top 5 correct: ", correct_5 / len(mnist_test_loader.dataset))
+
     print("Top 1 err: ", 1 - correct_1 / len(mnist_test_loader.dataset))
     print("Top 5 err: ", 1 - correct_5 / len(mnist_test_loader.dataset))
     print("Parameter numbers: {}".format(sum(p.numel() for p in net.parameters())))

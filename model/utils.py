@@ -42,7 +42,7 @@ def get_training_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=Tru
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
-    
+
     print()
     print(os.getcwd())
     print()
@@ -75,22 +75,22 @@ def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
 
     return mnist_test_loader
 
-def compute_mean_std(mnist_dataset):
-    """compute the mean and std of cifar100 dataset
-    Args:
-        cifar100_training_dataset or cifar100_test_dataset
-        witch derived from class torch.utils.data
-    Returns:
-        a tuple contains mean, std value of entire dataset
-    """
+# def compute_mean_std(mnist_dataset):
+#     """compute the mean and std of cifar100 dataset
+#     Args:
+#         cifar100_training_dataset or cifar100_test_dataset
+#         witch derived from class torch.utils.data
+#     Returns:
+#         a tuple contains mean, std value of entire dataset
+#     """
 
-    data_r = numpy.dstack([mnist_dataset[i][1][:, :, 0] for i in range(len(mnist_dataset))])
-    data_g = numpy.dstack([mnist_dataset[i][1][:, :, 1] for i in range(len(mnist_dataset))])
-    data_b = numpy.dstack([mnist_dataset[i][1][:, :, 2] for i in range(len(mnist_dataset))])
-    mean = numpy.mean(data_r), numpy.mean(data_g), numpy.mean(data_b)
-    std = numpy.std(data_r), numpy.std(data_g), numpy.std(data_b)
+#     data_r = numpy.dstack([mnist_dataset[i][1][:, :, 0] for i in range(len(mnist_dataset))])
+#     data_g = numpy.dstack([mnist_dataset[i][1][:, :, 1] for i in range(len(mnist_dataset))])
+#     data_b = numpy.dstack([mnist_dataset[i][1][:, :, 2] for i in range(len(mnist_dataset))])
+#     mean = numpy.mean(data_r), numpy.mean(data_g), numpy.mean(data_b)
+#     std = numpy.std(data_r), numpy.std(data_g), numpy.std(data_b)
 
-    return mean, std
+#     return mean, std
 
 class WarmUpLR(_LRScheduler):
     """warmup_training learning rate scheduler
