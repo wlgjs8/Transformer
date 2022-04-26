@@ -1,0 +1,10 @@
+.pth
+
+/runs
+/data
+/checkpoint
+
+coco/
+
+__pycache__/
+*.py[cod]

@@ -95,7 +95,6 @@ if __name__ == '__main__':
             print(torch.cuda.memory_summary(), end='')
 
         print()
-
         print("Top 1 correct: ", correct_1 / len(cifar100_test_loader.dataset))
         print("Top 5 correct: ", correct_5 / len(cifar100_test_loader.dataset))
 

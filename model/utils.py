@@ -48,7 +48,7 @@ def get_training_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=Tru
     print(os.getcwd())
     print()
 
-    cifar100_training = torchvision.datasets.CIFAR100(root='../data', train=True, download=True, transform=transform_train)
+    cifar100_training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
     cifar100_training_loader = DataLoader(
         cifar100_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
@@ -70,7 +70,7 @@ def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
-    cifar100_test = torchvision.datasets.CIFAR100(root='../data', train=False, download=True, transform=transform_test)
+    cifar100_test = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
     cifar100_test_loader = DataLoader(
         cifar100_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
