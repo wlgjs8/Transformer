@@ -1,6 +1,7 @@
 import argparse
 import sys
 import os
+import numpy as np
 
 from matplotlib import pyplot as plt
 
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('-weights', type=str, required=False, help='the weights file you want to test')
     parser.add_argument('-gpu', action='store_true', default=True, help='use gpu or not')
     parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
+    parser.add_argument('-f', action='store_true', default=False, help='output features')
     args = parser.parse_args()
 
     net = get_network(args)
@@ -35,45 +37,69 @@ if __name__ == '__main__':
     )
 
     net.load_state_dict(torch.load(args.weights))
-    print(net)
-    net.eval()
+    if args.f == True:
+        net = torch.nn.Sequential(*list(net.children())[:-1])
+    
+        print(net)
+        net.eval()
 
-    correct_1 = 0.0
-    correct_5 = 0.0
-    total = 0
+        outputs = []
+        with torch.no_grad():
+            for n_iter, (image, label) in enumerate(mnist_test_loader):
+                print("iteration: {}\ttotal {} iterations".format(n_iter + 1, len(mnist_test_loader)))
 
-    with torch.no_grad():
-        for n_iter, (image, label) in enumerate(mnist_test_loader):
-            print("iteration: {}\ttotal {} iterations".format(n_iter + 1, len(mnist_test_loader)))
+                if args.gpu:
+                    image = image.cuda()
+                    label = label.cuda()
+                    print('GPU INFO.....')
+                    print(torch.cuda.memory_summary(), end='')
 
-            if args.gpu:
-                image = image.cuda()
-                label = label.cuda()
-                print('GPU INFO.....')
-                print(torch.cuda.memory_summary(), end='')
+                output = net(image)
+                outputs.append(output.cpu())
+
+        print(np.array(outputs).shape)
+        print(outputs[0].shape)
+
+    else:
+        print(net)
+        net.eval()
+        
+        correct_1 = 0.0
+        correct_5 = 0.0
+        total = 0
+
+        with torch.no_grad():
+            for n_iter, (image, label) in enumerate(mnist_test_loader):
+                print("iteration: {}\ttotal {} iterations".format(n_iter + 1, len(mnist_test_loader)))
+
+                if args.gpu:
+                    image = image.cuda()
+                    label = label.cuda()
+                    print('GPU INFO.....')
+                    print(torch.cuda.memory_summary(), end='')
 
 
-            output = net(image)
-            _, pred = output.topk(5, 1, largest=True, sorted=True)
+                output = net(image)
+                _, pred = output.topk(5, 1, largest=True, sorted=True)
 
-            label = label.view(label.size(0), -1).expand_as(pred)
-            correct = pred.eq(label).float()
+                label = label.view(label.size(0), -1).expand_as(pred)
+                correct = pred.eq(label).float()
 
-            #compute top 5
-            correct_5 += correct[:, :5].sum()
+                #compute top 5
+                correct_5 += correct[:, :5].sum()
 
-            #compute top1
-            correct_1 += correct[:, :1].sum()
+                #compute top1
+                correct_1 += correct[:, :1].sum()
 
-    if args.gpu:
-        print('GPU INFO.....')
-        print(torch.cuda.memory_summary(), end='')
+        if args.gpu:
+            print('GPU INFO.....')
+            print(torch.cuda.memory_summary(), end='')
 
-    print()
+        print()
 
-    print("Top 1 correct: ", correct_1 / len(mnist_test_loader.dataset))
-    print("Top 5 correct: ", correct_5 / len(mnist_test_loader.dataset))
+        print("Top 1 correct: ", correct_1 / len(mnist_test_loader.dataset))
+        print("Top 5 correct: ", correct_5 / len(mnist_test_loader.dataset))
 
-    print("Top 1 err: ", 1 - correct_1 / len(mnist_test_loader.dataset))
-    print("Top 5 err: ", 1 - correct_5 / len(mnist_test_loader.dataset))
-    print("Parameter numbers: {}".format(sum(p.numel() for p in net.parameters())))
+        print("Top 1 err: ", 1 - correct_1 / len(mnist_test_loader.dataset))
+        print("Top 5 err: ", 1 - correct_5 / len(mnist_test_loader.dataset))
+        print("Parameter numbers: {}".format(sum(p.numel() for p in net.parameters())))

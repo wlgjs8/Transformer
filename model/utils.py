@@ -19,6 +19,7 @@ def get_network(args):
 
     if args.net == 'resnet50':
         net = resnet50()
+
     elif args.net == 'resnet101':
         net = resnet101()
 
