@@ -126,22 +126,28 @@ if __name__ == '__main__':
 
     net = get_network(args)
 
-    #data preprocessing:
-    cifar100_training_loader = get_training_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
-        batch_size=args.b,
-        shuffle=True
-    )
+    # data preprocessing:
+    ## CIFAR 10
+    # cifar100_training_loader = get_training_dataloader(
+    #     settings.CIFAR100_TRAIN_MEAN,
+    #     settings.CIFAR100_TRAIN_STD,
+    #     num_workers=4,
+    #     batch_size=args.b,
+    #     shuffle=True
+    # )
 
-    cifar100_test_loader = get_test_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
-        batch_size=args.b,
-        shuffle=True
-    )
+    # cifar100_test_loader = get_test_dataloader(
+    #     settings.CIFAR100_TRAIN_MEAN,
+    #     settings.CIFAR100_TRAIN_STD,
+    #     num_workers=4,
+    #     batch_size=args.b,
+    #     shuffle=True
+    # )
+    
+    ## COCO dataset
+    # COCO_train_loader = 
+    
+    # COCO_test_loader
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
