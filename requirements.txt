@@ -1,0 +1,53 @@
+absl-py==1.0.0
+# Editable install with no version control (alphapose==0.3.0+5a60d5c)
+-e /home/jeeheon/Documents/ETRI_Final_Software/AlphaPose
+cachetools==5.0.0
+certifi==2021.10.8
+charset-normalizer==2.0.12
+cycler==0.11.0
+fonttools==4.33.2
+google-auth==2.6.6
+google-auth-oauthlib==0.4.6
+grpcio==1.44.0
+idna==3.3
+importlib-metadata==4.11.3
+jsonpatch==1.32
+jsonpointer==2.1
+kiwisolver==1.4.2
+Markdown==3.3.6
+matplotlib==3.5.1
+mkl-fft==1.3.1
+mkl-random @ file:///tmp/build/80754af9/mkl_random_1626179032232/work
+mkl-service==2.4.0
+munkres==1.1.4
+numpy @ file:///tmp/build/80754af9/numpy_and_numpy_base_1649782762302/work
+oauthlib==3.2.0
+packaging==21.3
+Pillow==9.0.1
+protobuf==3.20.1
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pyparsing==3.0.8
+python-dateutil==2.8.2
+requests==2.27.1
+requests-oauthlib==1.3.1
+rsa==4.8
+scipy==1.1.0
+six @ file:///tmp/build/80754af9/six_1644875935023/work
+tensorboard==2.8.0
+tensorboard-data-server==0.6.1
+tensorboard-plugin-wit==1.8.1
+tensorboardX==2.4
+terminaltables==3.1.0
+timm==0.1.20
+torch==1.7.1
+torchaudio==0.7.0a0+a853dff
+torchfile==0.1.0
+torchvision==0.8.2
+tqdm==4.64.0
+typing_extensions @ file:///opt/conda/conda-bld/typing_extensions_1647553014482/work
+urllib3==1.26.9
+visdom==0.1.8.9
+websocket-client==1.2.1
+Werkzeug==2.1.1
+zipp==3.8.0
