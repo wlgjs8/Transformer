@@ -48,11 +48,11 @@ def get_training_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=Tru
     print(os.getcwd())
     print()
 
-    mnist_training = torchvision.datasets.MNIST(root='../data', train=True, download=True, transform=transform_train)
-    mnist_training_loader = DataLoader(
-        mnist_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
+    cifar100_training = torchvision.datasets.CIFAR100(root='../data', train=True, download=True, transform=transform_train)
+    cifar100_training_loader = DataLoader(
+        cifar100_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
-    return mnist_training_loader
+    return cifar100_training_loader
 
 def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
     """ return training dataloader
@@ -70,11 +70,11 @@ def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
-    mnist_test = torchvision.datasets.MNIST(root='../data', train=False, download=True, transform=transform_test)
-    mnist_test_loader = DataLoader(
-        mnist_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
+    cifar100_test = torchvision.datasets.CIFAR100(root='../data', train=False, download=True, transform=transform_test)
+    cifar100_test_loader = DataLoader(
+        cifar100_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
-    return mnist_test_loader
+    return cifar100_test_loader
 
 # def compute_mean_std(mnist_dataset):
 #     """compute the mean and std of cifar100 dataset
