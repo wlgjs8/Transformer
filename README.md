@@ -32,5 +32,5 @@ python example/train_resnet.py -net resnet50
 
 ### 2) Test Model on MNIST Dataset
 ```bash
-python example/test_resnet.py -net resnet50 -weight [path to checkpoint]
+python example/test_resnet.py -net resnet50 -weights [path to checkpoint]
 ```
