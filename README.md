@@ -2,9 +2,9 @@
 
 ## TODO
 
-### 1. ResNet 50, 101 train / test able code (Mnist, COCO)
+### 1. ResNet 50, 101 train / test able code (MNIST, COCO)
 
-### 2. Transformer trainable code (Mnist)
+### 2. Transformer trainable code (MNIST)
 
 ### 3. ResNet + Transformer 
 
