@@ -3,13 +3,16 @@ import sys
 import re
 import datetime
 
-import numpy
+import numpy as np
+from PIL import Image
 
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 import torchvision
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader
+
+# from torchvision.transforms import transform_COCO
+from torch.utils.data import DataLoader, Dataset
 
 from resnet import resnet50, resnet101
 
@@ -67,8 +70,113 @@ def get_cifar100_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffl
     return cifar100_test_loader
 
 
-def get_coco_train_dataloader()
+class CocoDataset(Dataset):
+    def __init__(self, root_dir='/home/jeeheon/Documents/Transformer', set_name='val2017', split='TRAIN', transform=None):
 
+        super().__init__()
+        self.root_dir = os.getcwd()
+        # print('COCO ROOT DIR : ', os.getcwd())
+        self.set_name = set_name
+        self.coco = COCO(os.path.join(self.root_dir, 'coco/annotations', 'instances_' + self.set_name + '.json'))
+
+        whole_image_ids = self.coco.getImgIds()
+
+        self.image_ids = []
+        self.no_anno_list = []
+
+        for idx in whole_image_ids:
+            annotations_ids = self.coco.getAnnIds(imgIds=idx, iscrowd=False)
+            if len(annotations_ids) == 0:
+                self.no_anno_list.append(idx)
+            else:
+                self.image_ids.append(idx)
+            
+        # self.load_classes()
+        self.split = split
+        self.transform = transform
+
+    def __getitem__(self, idx):
+
+        visualize = True
+
+        image, (w, h) = self.load_image(idx)
+
+        annotation = self.load_annotations(idx)
+
+        boxes = torch.FloatTensor(annotation[:, :4])
+        labels = torch.LongTensor(annotation[:, 4])
+
+        if labels.nelement() == 0:
+            visualize = True
+
+        if self.transform is not None:
+            # image, boxes, labels, segmentations = self.transform(image, boxes, labels, self.split)
+            image, boxes, labels = self.transform(image, boxes, labels)
+
+        return image, boxes, labels
+
+    def __len__(self):  
+        return len(self.image_ids)
+
+    def load_image(self, idx):
+        image_info = self.coco.loadImgs(self.image_ids[idx])[0]
+        path = os.path.join(self.root_dir, 'coco', self.set_name, image_info['file_name'])
+        image = Image.open(path).convert('RGB')
+
+        return image, (image_info['width'], image_info['height'])
+
+    def load_annotations(self, idx):
+        annotations_ids = self.coco.getAnnIds(imgIds=self.image_ids[idx], iscrowd=False)
+        annotations = np.zeros((0, 5))
+
+        if len(annotations_ids) == 0:
+            return annotations
+
+        coco_annotations = self.coco.loadAnns(annotations_ids)
+        for index, a in enumerate(coco_annotations):
+
+            if a['bbox'][2] < 1 or a['bbox'][3] < 1:
+                continue
+
+            annotation = np.zeros((1, 5))
+            annotation[0, :4] = a['bbox']
+            annotation[0, 4] = a['category_id']
+            annotations = np.append(annotations, annotation, axis=0)
+        
+        annotations[:, 2] = annotations[:, 0] + annotations[:, 2]
+        annotations[:, 3] = annotations[:, 1] + annotations[:, 3]
+
+        return annotations
+
+    # def collate_fn(self, data):
+    #     # Sort a data list by caption length (descending order).
+    #     data.sort(key=lambda x: len(x[1]), reverse=True)
+    #     images, captions = zip(*data)
+
+    #     # Merge images (from tuple of 3D tensor to 4D tensor).
+    #     images = torch.stack(images, 0)
+
+    #     # Merge captions (from tuple of 1D tensor to 2D tensor).
+    #     lengths = [len(cap) for cap in captions]
+    #     targets = torch.zeros(len(captions), max(lengths)).long()
+    #     for i, cap in enumerate(captions):
+    #         end = lengths[i]
+    #         targets[i, :end] = cap[:end]        
+    #     return images, targets, lengths
+
+    def collate_fn(self, batch):
+        images = list()
+        boxes = list()
+        labels = list()
+
+        for b in batch:
+            images.append(b[0])
+            boxes.append(b[1])
+            labels.append(b[2])
+
+        images = torch.Tensor(np.array(images))
+        images = torch.stack(images, dim=0)
+        return images, boxes, labels
 
 
 class WarmUpLR(_LRScheduler):
