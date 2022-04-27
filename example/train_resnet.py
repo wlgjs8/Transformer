@@ -18,7 +18,7 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
+from utils import get_network, get_cifar100_train_dataloader, get_cifar100_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     net = get_network(args)
 
     #data preprocessing:
-    cifar100_training_loader = get_training_dataloader(
+    cifar100_training_loader = get_cifar100_train_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         shuffle=True
     )
 
-    cifar100_test_loader = get_test_dataloader(
+    cifar100_test_loader = get_cifar100_test_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,

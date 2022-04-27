@@ -14,7 +14,7 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, get_test_dataloader
+from utils import get_network, get_cifar100_test_dataloader
 
 if __name__ == '__main__':
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     net = get_network(args)
 
-    cifar100_test_loader = get_test_dataloader(
+    cifar100_test_loader = get_cifar100_test_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
