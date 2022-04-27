@@ -12,8 +12,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 from resnet import resnet50, resnet101
-# import resnet
 
+from pycocotools.coco import COCO
 
 def get_network(args):
 
@@ -33,7 +33,7 @@ def get_network(args):
     return net
 
 
-def get_training_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
+def get_cifar100_train_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
   
     transform_train = transforms.Compose([
         #transforms.ToPILImage(),
@@ -54,17 +54,7 @@ def get_training_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=Tru
 
     return cifar100_training_loader
 
-def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
-    """ return training dataloader
-    Args:
-        mean: mean of cifar100 test dataset
-        std: std of cifar100 test dataset
-        path: path to cifar100 test python dataset
-        batch_size: dataloader batchsize
-        num_workers: dataloader num_works
-        shuffle: whether to shuffle
-    Returns: cifar100_test_loader:torch dataloader object
-    """
+def get_cifar100_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
 
     transform_test = transforms.Compose([
         transforms.ToTensor(),
@@ -76,22 +66,10 @@ def get_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
 
     return cifar100_test_loader
 
-# def compute_mean_std(mnist_dataset):
-#     """compute the mean and std of cifar100 dataset
-#     Args:
-#         cifar100_training_dataset or cifar100_test_dataset
-#         witch derived from class torch.utils.data
-#     Returns:
-#         a tuple contains mean, std value of entire dataset
-#     """
 
-#     data_r = numpy.dstack([mnist_dataset[i][1][:, :, 0] for i in range(len(mnist_dataset))])
-#     data_g = numpy.dstack([mnist_dataset[i][1][:, :, 1] for i in range(len(mnist_dataset))])
-#     data_b = numpy.dstack([mnist_dataset[i][1][:, :, 2] for i in range(len(mnist_dataset))])
-#     mean = numpy.mean(data_r), numpy.mean(data_g), numpy.mean(data_b)
-#     std = numpy.std(data_r), numpy.std(data_g), numpy.std(data_b)
+def get_coco_train_dataloader()
 
-#     return mean, std
+
 
 class WarmUpLR(_LRScheduler):
     """warmup_training learning rate scheduler
