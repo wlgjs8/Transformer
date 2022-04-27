@@ -36,20 +36,21 @@ if __name__ == '__main__':
     net = get_network(args)
 
     #data preprocessing:
-    train_set = CocoDataset()
+    train_set = CocoDataset(set_name='train2017', split='TRAIN')
+    test_set = CocoDataset(set_name='val2017', split='TEST')
+    print(len(train_set))
+
 
     train_loader = DataLoader(train_set, batch_size=1, collate_fn=train_set.collate_fn, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_set, batch_size=1, collate_fn=train_set.collate_fn, shuffle=False, num_workers=4, pin_memory=True)
     # train_loader = DataLoader(train_set, batch_size=4, collate_fn=None, shuffle=False, num_workers=4, pin_memory=True)
     
-    for i, (images, boxes, labels) in enumerate(train_loader):
-        print(i)
-        print(images)
-        print(boxes)
-        print(labels)
-        print()
+    # for i, (images, boxes, labels) in enumerate(train_loader):
+    #     print(boxes)
+    #     print()
 
-        images = images.cuda()
-        boxes = [b.cuda() for b in boxes]
-        labels = [l.cuda() for l in labels]
+    #     images = images.cuda()
+    #     boxes = [b.cuda() for b in boxes]
+    #     labels = [l.cuda() for l in labels]
 
     # return 0 

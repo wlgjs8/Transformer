@@ -71,7 +71,7 @@ def get_cifar100_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffl
 
 
 class CocoDataset(Dataset):
-    def __init__(self, root_dir='/home/jeeheon/Documents/Transformer', set_name='val2017', split='TRAIN', transform=None):
+    def __init__(self, root_dir='/home/jeeheon/Documents/Transformer', set_name='val2017', split='TRAIN', img_size=512, transform=None):
 
         super().__init__()
         self.root_dir = os.getcwd()
@@ -93,6 +93,7 @@ class CocoDataset(Dataset):
             
         # self.load_classes()
         self.split = split
+        self.img_size = img_size
         self.transform = transform
 
     def __getitem__(self, idx):
@@ -122,7 +123,11 @@ class CocoDataset(Dataset):
         image_info = self.coco.loadImgs(self.image_ids[idx])[0]
         path = os.path.join(self.root_dir, 'coco', self.set_name, image_info['file_name'])
         image = Image.open(path).convert('RGB')
+        #Image.Resampling.BILINEAR = 2
+        image = image.resize((self.img_size, self.img_size), resample=2)
 
+        trans = transforms.ToTensor()
+        image = trans(image)
         return image, (image_info['width'], image_info['height'])
 
     def load_annotations(self, idx):
@@ -148,22 +153,6 @@ class CocoDataset(Dataset):
 
         return annotations
 
-    # def collate_fn(self, data):
-    #     # Sort a data list by caption length (descending order).
-    #     data.sort(key=lambda x: len(x[1]), reverse=True)
-    #     images, captions = zip(*data)
-
-    #     # Merge images (from tuple of 3D tensor to 4D tensor).
-    #     images = torch.stack(images, 0)
-
-    #     # Merge captions (from tuple of 1D tensor to 2D tensor).
-    #     lengths = [len(cap) for cap in captions]
-    #     targets = torch.zeros(len(captions), max(lengths)).long()
-    #     for i, cap in enumerate(captions):
-    #         end = lengths[i]
-    #         targets[i, :end] = cap[:end]        
-    #     return images, targets, lengths
-
     def collate_fn(self, batch):
         images = list()
         boxes = list()
@@ -174,7 +163,6 @@ class CocoDataset(Dataset):
             boxes.append(b[1])
             labels.append(b[2])
 
-        images = torch.Tensor(np.array(images))
         images = torch.stack(images, dim=0)
         return images, boxes, labels
 
