@@ -36,3 +36,17 @@ python example/train_resnet.py -net resnet50
 ```bash
 python example/test_resnet.py -net resnet50 -weights [path to checkpoint]
 ```
+
+# Directory Structure
+```bash
+├── coco
+│   ├── train2017
+│   ├── test2017
+│   ├── val2017
+│   └── annotations
+├── data
+│   ├── MNIST
+│   └── cifar-100-python
+├── checkpoint
+    └── resnet
+``` 
