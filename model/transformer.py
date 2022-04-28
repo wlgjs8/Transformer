@@ -1,45 +1,43 @@
-# import math
-# import torch
-# import torch.nn as nn
+import math
+import torch
+import torch.nn as nn
 # from torch.autograd import Variable
-# import torch.nn.functional as F
-# from torch.nn import CrossEntropyLoss
-# from model.util import clones
-# from transformers.activations import 
-# import numpy as np
+import torch.nn.functional as F
 
-# """
-# Positional Encoding
-# Encoder
-# Decoder
-# Transformer
-# """
+from torch.nn import CrossEntropyLoss
+import numpy as np
+from model.sublayers import MultiHeadAttention, PositionwiseFeedForward
+
+class EncoderLayer(nn.Module):
+    # def __init__(self, hidden_dim, num_head, inner_dim):
+    def __init__(self, d_model, d_inner, n_head, d_key, d_value, dropout=0.1):
+        super().__init__()
+
+        # self.hidden_dim = hidden_dim
+        # self.num_head = num_head
+        # self.inner_dim = inner_dim
+
+        # self.MultiHeadAttention = MultiHeadAttention(num_head, inner_dim, inner_dim, inner_dim)
+        self.MultiHeadAttention = MultiHeadAttention(n_head, d_model, d_key, d_value, dropout=dropout)
+        self.PositionwiseFeedForward = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
+        
+
+    def forward(self, input, mask=None):
+        output = self.MultiHeadAttention(input, input, input, mask=mask)
+        output_ = self.PositionwiseFeedForward(output)
+        # output = output + output
+
+        return output
 
 
+class Transformer(nn.Module):
+    def __init__(self, n_head, d_key, d_value, d_model, d_inner, dropout=0.1):
+        super().__init__()
+        # self.encoder = EncoderLayer(hidden_dim, num_head, inner_dim)
+        self.encoder = EncoderLayer(d_model, d_inner, n_head, d_key, d_value, dropout=dropout)
+        self.d_model = d_model
 
+    def forward(self, enc_src):
+        output = self.encoder(enc_src)
 
-# # """
-# # self-Attention의 경우 Query, Key, Value를 입력으로 받아
-# # MatMul(Q, K) -> Scale -> Masking(opt. Decoder) -> Softmax -> MatMul(result, V)
-
-# # """
-
-# # def self_attention(query, key, value, mask=None):
-# #     key_transpose = torch.transpose(key, -2, -1)
-# #     matmul_result = torch.matmul(query, key_transpose)
-# #     d_k = query.size()[-1]
-# #     attention_score = matmul_result / math.sqrt(d_k)
-
-# #     if mask is not None:
-# #         attention_score = attention_score.masked_fill(mask == 0, -1e20)
-
-# #     softmax_attention_score = F.softmax(attention_score, dim=-1)
-# #     result = torch.matmul(softmax_attention_score, value)
-
-# #     return result, softmax_attention_score
-
-# # class MultiHeadAttention(nn.Module):
-# #     # init
-# #     # forward 
-
-# # class FeedForward
+        return output
