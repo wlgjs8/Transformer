@@ -20,7 +20,24 @@ sys.path.append('model')
 from config import settings
 from utils import get_network, CocoDataset, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
+    
+from model.optim import ScheduledOptim
 
+
+def train(epoch):
+    
+    start = time.time()
+    net.train()
+    for i, (images, boxes, labels) in enumerate(train_loader):
+        print(i)
+        print(images)
+        print(boxes)
+        print(labels)
+        print()
+
+        images = images.cuda()
+        boxes = [b.cuda() for b in boxes]
+        labels = [l.cuda() for l in labels]
 
 if __name__ == '__main__':
 
@@ -41,15 +58,10 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_set, batch_size=1, collate_fn=train_set.collate_fn, shuffle=False, num_workers=4, pin_memory=True)
     # train_loader = DataLoader(train_set, batch_size=4, collate_fn=None, shuffle=False, num_workers=4, pin_memory=True)
     
-    for i, (images, boxes, labels) in enumerate(train_loader):
-        print(i)
-        print(images)
-        print(boxes)
-        print(labels)
-        print()
-
-        images = images.cuda()
-        boxes = [b.cuda() for b in boxes]
-        labels = [l.cuda() for l in labels]
+    loss_function = nn.CrossEntropyLoss()       ## LabelSmoothin이 없을 시
+    optimizer = ScheduledOptim(
+        optim.Adam(net.parameters(), betas=(0.9, 0.98), eps=1e-09),
+        opt.lr_mul, opt.d_model, opt.n_warmup_steps)
+    iter_per_epoch = len(train_loader)
 
     # return 0 
