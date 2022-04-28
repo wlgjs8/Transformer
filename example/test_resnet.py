@@ -61,8 +61,8 @@ if __name__ == '__main__':
         outputs = torch.cat([o for o in outputs], 0)
         print(outputs.shape)
         
-        # ## saving cifar100 features ([10000, 2048])
-        # np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
+        ## saving cifar100 features ([10000, 2048])
+        np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
 
     else:
         print(net)
