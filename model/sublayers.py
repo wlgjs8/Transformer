@@ -9,7 +9,7 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
 
         self.n_head = n_head
-        self.d_model = d_model
+        # self.d_model = d_model
         self.d_key = d_key
         self.d_value = d_value
 
@@ -26,7 +26,7 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key, value, mask=None):
 
         d_key, d_value, n_head = self.d_key, self.d_value, self.n_head
-        size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1). key.size(1)
+        size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1). value.size(1)
 
         residual = query
 
