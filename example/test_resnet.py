@@ -16,6 +16,8 @@ sys.path.append('model')
 from config import settings
 from utils import get_network, get_cifar100_test_dataloader
 
+OUTPUT_DIR = 'output'
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -54,10 +56,13 @@ if __name__ == '__main__':
                     # print(torch.cuda.memory_summary(), end='')
                 
                 output = net(image)
-                outputs.append(output.cpu())
-
-        print(np.array(outputs).shape)
-        print(outputs[0].shape)
+                outputs.append(output.reshape(-1, 2048).cpu())
+        
+        outputs = torch.cat([o for o in outputs], 0)
+        print(outputs.shape)
+        
+        # ## saving cifar100 features ([10000, 2048])
+        # np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
 
     else:
         print(net)
