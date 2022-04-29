@@ -3,7 +3,6 @@ import sys
 import argparse
 import time
 from datetime import datetime
-from example.train_resnet import eval_training
 
 import numpy as np
 import torch
