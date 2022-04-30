@@ -23,7 +23,6 @@ class EncoderLayer(nn.Module):
         
 
     def forward(self, input, mask=None):
-        print("input shape :", input.shape)
         output = self.MultiHeadAttention(input, input, input, mask=mask)
         output_ = self.PositionwiseFeedForward(output)
         # output = output + output
