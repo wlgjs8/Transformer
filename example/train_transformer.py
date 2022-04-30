@@ -31,16 +31,6 @@ def train(epoch):
     
     start = time.time()
     transformer.train()
-    # for i, (feat, boxes, labels) in enumerate(train_loader):
-    #     print(i)
-    #     print(feat)
-    #     print(boxes)
-    #     print(labels)
-    #     print()
-
-    #     feat = feat.cuda()
-    #     boxes = [b.cuda() for b in boxes]
-    #     labels = [l.cuda() for l in labels]
     for batch_index, (feat, labels) in enumerate(zip(X_train, Y_train)):
     
         if args.gpu:
@@ -51,7 +41,7 @@ def train(epoch):
         outputs = transformer(feat)
         loss = loss_function(outputs, labels)
         loss.backward()
-        optimizer.step_and_update_lr()
+        optimizer.step()
 
         n_iter = (epoch - 1) * len(Y_train) + batch_index + 1
 
@@ -159,14 +149,9 @@ if __name__ == '__main__':
     Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
     print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
     
-    loss_function = nn.CrossEntropyLoss()       ## LabelSmoothing이 없을 시
-    # optimizer = ScheduledOptim(
-    #     optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
-    #     args.lr, d_model, args.warm)
+    loss_function = nn.CrossEntropyLoss()
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
     iter_per_epoch = len(X_train)
-    
-    # if args.resume:
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
     ## log 작성??
@@ -180,6 +165,7 @@ if __name__ == '__main__':
     writer.add_graph(transformer, input_tensor)
     ##
     
+
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{transformer}-{epoch}-{type}.pth')
@@ -187,7 +173,7 @@ if __name__ == '__main__':
     best_acc = 0.0
     
     for epoch in range(1, settings.EPOCH + 1):
-            
+      
         train(epoch)
         acc = eval_training(epoch)
         
