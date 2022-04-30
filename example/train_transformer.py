@@ -18,44 +18,44 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, CocoDataset, get_cifar100_train_dataloader, get_cifar100_test_dataloader, WarmUpLR, \
+from utils import get_network, CocoDataset, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
     
 from model.optim import ScheduledOptim
 
 import model.constants as Constants
-from model.models import Transformer
+from model.transformer import Transformer
 from model.optim import ScheduledOptim
 
 def train(epoch):
     
     start = time.time()
-    net.train()
-    # for i, (images, boxes, labels) in enumerate(train_loader):
+    transformer.train()
+    # for i, (feat, boxes, labels) in enumerate(train_loader):
     #     print(i)
-    #     print(images)
+    #     print(feat)
     #     print(boxes)
     #     print(labels)
     #     print()
 
-    #     images = images.cuda()
+    #     feat = feat.cuda()
     #     boxes = [b.cuda() for b in boxes]
     #     labels = [l.cuda() for l in labels]
-    for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+    for batch_index, (feat, labels) in enumerate(zip(X_train, Y_train)):
     
         if args.gpu:
             labels = labels.cuda()
-            images = images.cuda()
+            feat = feat.cuda()
 
         optimizer.zero_grad()
-        outputs = net(images)
+        outputs = transformer(feat)
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step_and_update_lr()
 
-        n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
+        n_iter = (epoch - 1) * len(Y_train) + batch_index + 1
 
-        # last_layer = list(net.children())[-1]
+        # last_layer = list(transformer.children())[-1]
         # for name, para in last_layer.named_parameters():
         #     if 'weight' in name:
         #         writer.add_scalar('LastLayerGradients/grad_norm2_weights', para.grad.norm(), n_iter)
@@ -66,8 +66,8 @@ def train(epoch):
             loss.item(),
             optimizer._optimizer.param_groups[0]['lr'],
             epoch=epoch,
-            trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
+            trained_samples=batch_index * args.b + len(feat),
+            total_samples=len(Y_train)
         ))
 
         #update training loss for each iteration
@@ -76,7 +76,7 @@ def train(epoch):
         # if epoch <= args.warm:
         #     optimizer.step()
             
-    # for name, param in net.named_parameters():
+    # for name, param in transformer.named_parameters():
     #     layer, attr = os.path.splitext(name)
     #     attr = attr[1:]
     #     writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
@@ -90,18 +90,18 @@ def train(epoch):
 def eval_training(epoch=0, tb=True):
 
     start = time.time()
-    net.eval()
+    transformer.eval()
 
     test_loss = 0.0 # cost function error
     correct = 0.0
 
-    for (images, labels) in cifar100_test_loader:
+    for (feat, labels) in zip(X_test, Y_test):
 
         if args.gpu:
-            images = images.cuda()
+            feat = feat.cuda()
             labels = labels.cuda()
 
-        outputs = net(images)
+        outputs = transformer(feat)
         loss = loss_function(outputs, labels)
 
         test_loss += loss.item()
@@ -115,18 +115,18 @@ def eval_training(epoch=0, tb=True):
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
-        test_loss / len(cifar100_test_loader.dataset),
-        correct.float() / len(cifar100_test_loader.dataset),
+        test_loss / len(Y_test),
+        correct.float() / len(Y_test)),
         finish - start
-    ))
+    )
     print()
 
     #add informations to tensorboard
     if tb:
-        writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
-        writer.add_scalar('Test/Accuracy', correct.float() / len(cifar100_test_loader.dataset), epoch)
+        writer.add_scalar('Test/Average loss', test_loss / len(Y_test), epoch)
+        writer.add_scalar('Test/Accuracy', correct.float() / len(Y_test), epoch)
 
-    return correct.float() / len(cifar100_test_loader.dataset)
+    return correct.float() / len(Y_test)
 
 
 if __name__ == '__main__':
@@ -137,80 +137,70 @@ if __name__ == '__main__':
     parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
-    parser.add_argument('-resume', action='store_true', default=False, help='resume training')
     args = parser.parse_args()
+    
+    d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 2048, 2048, 8, 0.1
+    print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
-    net = Transformer(
-        #####
+    transformer = Transformer(
+        n_head=n_head,
+        d_key=d_key,
+        d_value=d_value,
+        d_model=d_model,
+        d_inner=d_inner,
+        dropout=dropout,
     )
     
-    #data preprocessing:
-    # train_set = CocoDataset()
-
-    # train_loader = DataLoader(train_set, batch_size=1, collate_fn=train_set.collate_fn, shuffle=False, num_workers=4, pin_memory=True)
-    # # train_loader = DataLoader(train_set, batch_size=4, collate_fn=None, shuffle=False, num_workers=4, pin_memory=True)
+    X_train = torch.Tensor(np.load('output/cifar100_train_features.npy'))
+    Y_train = torch.Tensor(np.load('output/cifar100_train_labels.npy'))
+    print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
     
-    cifar100_training_loader = get_cifar100_train_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
-        batch_size=args.b,
-        shuffle=True
-    )
-
-    cifar100_test_loader = get_cifar100_test_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
-        batch_size=args.b,
-        shuffle=True
-    )
-    
+    X_test = torch.Tensor(np.load('output/cifar100_test_features.npy'))
+    Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
+    print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
     
     loss_function = nn.CrossEntropyLoss()       ## LabelSmoothing이 없을 시
-    optimizer = ScheduledOptim(
-        optim.Adam(net.parameters(), betas=(0.9, 0.98), eps=1e-09),
-        args.lr, args.d_model, args.warm)       ## args.d_model은 2048 고정?? 인자로??
-    iter_per_epoch = len(cifar100_training_loader)
+    # optimizer = ScheduledOptim(
+    #     optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
+    #     args.lr, d_model, args.warm)
+    optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
+    iter_per_epoch = len(X_train)
     
     # if args.resume:
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
     ## log 작성??
     writer = SummaryWriter(log_dir=os.path.join(
-        settings.LOG_DIR, args.net, settings.TIME_NOW
+        settings.LOG_DIR, 'transformer', settings.TIME_NOW
     ))
     input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
+    # input_tensor = np.arange(1, 2048, 1)
     if args.gpu:
         input_tensor = input_tensor.cuda()
-    writer.add_graph(net, input_tensor)
+    writer.add_graph(transformer, input_tensor)
     ##
     
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-    checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
+    checkpoint_path = os.path.join(checkpoint_path, '{transformer}-{epoch}-{type}.pth')
     
     best_acc = 0.0
     
     for epoch in range(1, settings.EPOCH + 1):
-        # if epoch > args.warm:
-        #     optimizer.step(epoch)
             
         train(epoch)
         acc = eval_training(epoch)
         
         if epoch > settings.MILESTONES[1] and best_acc < acc:
-            weights_path = checkpoint_path.format(net='transformer', epoch=epoch, type='best')
+            weights_path = checkpoint_path.format(transformer='transformer', epoch=epoch, type='best')
             print('saving weights file to {}'.format(weights_path))
-            torch.save(net.state_dict(), weights_path)
+            torch.save(transformer.state_dict(), weights_path)
             best_acc = acc
             continue
         
         if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(net='transformer', epoch=epoch, type='regular')
+            weights_path = checkpoint_path.format(transformer='transformer', epoch=epoch, type='regular')
             print('saving weights file to {}'.format(weights_path))
-            torch.save(net.state_dict(), weights_path)
+            torch.save(transformer.state_dict(), weights_path)
             
     writer.close()
-
-    # return 0 
