@@ -18,6 +18,7 @@ from resnet import resnet50, resnet101
 
 from pycocotools.coco import COCO
 
+
 def get_network(args):
 
     if args.net == 'resnet50':
