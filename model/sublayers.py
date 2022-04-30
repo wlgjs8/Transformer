@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from model.modules import ScaledDotProductAttention, SigmoidScaledDotProductAttention
@@ -13,10 +14,11 @@ class MultiHeadAttention(nn.Module):
         self.d_key = d_key
         self.d_value = d_value
 
-        self.w_query = nn.Linear(d_model, n_head * d_key)
-        self.w_key = nn.Linear(d_model, n_head * d_key)
-        self.w_value = nn.Linear(d_model, n_head * d_value)
-        self.fc = nn.Linear(n_head * d_value, d_model)
+        # self.w_query = nn.Linear(d_model, n_head * d_key)
+        self.w_query = nn.Linear(d_model, d_model)
+        self.w_key = nn.Linear(d_model, d_model)
+        self.w_value = nn.Linear(d_model, d_model)
+        self.fc = nn.Linear(d_model, d_model)
 
         self.attention = ScaledDotProductAttention(temperature = d_key ** 0.5)
         self.attention_sigmoid = SigmoidScaledDotProductAttention(temperature = d_key ** 0.5)
@@ -26,7 +28,13 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key, value, mask=None):
 
         d_key, d_value, n_head = self.d_key, self.d_value, self.n_head
-        size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1), value.size(1)
+        # size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1), value.size(1)
+        size_batch = 1
+        # print(query.size(0))
+
+        len_query = 1
+        len_key = 1
+        len_value = 1
 
         residual = query
 

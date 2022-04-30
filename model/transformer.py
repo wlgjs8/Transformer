@@ -23,8 +23,9 @@ class EncoderLayer(nn.Module):
         
 
     def forward(self, input, mask=None):
-        output = self.MultiHeadAttention(input, input, input, mask=mask)
-        output_ = self.PositionwiseFeedForward(output)
+        output, _ = self.MultiHeadAttention(input, input, input, mask=mask)
+        output = output.view(1, 2048)
+        output = self.PositionwiseFeedForward(output)
         # output = output + output
 
         return output
@@ -36,8 +37,12 @@ class Transformer(nn.Module):
         # self.encoder = EncoderLayer(hidden_dim, num_head, inner_dim)
         self.encoder = EncoderLayer(d_model, d_inner, n_head, d_key, d_value, dropout=dropout)
         self.d_model = d_model
+        self.fc = nn.Linear(d_model, 100)
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, enc_src):
         output = self.encoder(enc_src)
+        output = self.fc(output)
+        output = self.softmax(output)
 
         return output

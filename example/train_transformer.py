@@ -7,6 +7,7 @@ from datetime import datetime
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
@@ -29,6 +30,53 @@ import model.constants as Constants
 from model.transformer import Transformer
 from model.optim import ScheduledOptim
 
+def train(transformer, epoch):
+
+    start = time.time()
+    # transformer.train()
+    transformer.cuda()
+    for batch_index, (feat, labels) in enumerate(zip(X_train, Y_train)):
+
+        feat = feat.cuda()
+        optimizer.zero_grad()
+        
+        outputs = transformer(feat)
+        print(outputs)
+
+        labels = labels.to(torch.int64)
+        labels = labels.reshape(1, 1)
+
+        labels = labels.cuda()
+        loss = loss_function(outputs, torch.max(labels, 1)[1])
+        # loss = loss_function(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        n_iter = (epoch - 1) * len(Y_train) + batch_index + 1
+
+        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+            loss.item(),
+            optimizer.param_groups[0]['lr'],
+            epoch=epoch,
+            trained_samples=batch_index * 1 + len(feat),
+            total_samples=len(Y_train)
+        ))
+
+        #update training loss for each iteration
+        writer.add_scalar('Train/loss', loss.item(), n_iter)
+
+        # if epoch <= args.warm:
+        #     optimizer.step()
+            
+    # for name, param in transformer.named_parameters():
+    #     layer, attr = os.path.splitext(name)
+    #     attr = attr[1:]
+    #     writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
+        
+    finish = time.time()
+    
+    print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
+    
 
 if __name__ == '__main__':
 
@@ -40,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     args = parser.parse_args()
     
-    d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 2048, 2048, 8, 0.1
+    d_key, d_value, d_model, d_inner, n_head, dropout = 1024, 1024, 2048, 512, 2, 0.1
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
     transformer = Transformer(
@@ -69,13 +117,12 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=os.path.join(
         settings.LOG_DIR, 'transformer', settings.TIME_NOW
     ))
-    input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
+    # input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
     # input_tensor = np.arange(1, 2048, 1)
-    if args.gpu:
-        input_tensor = input_tensor.cuda()
-    writer.add_graph(transformer, input_tensor)
-    ##
-    
+    # input_tensor = torch.Tensor(input_tensor)
+
+    # input_tensor = input_tensor.cuda()
+    # writer.add_graph(transformer, input_tensor)
 
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
@@ -85,7 +132,7 @@ if __name__ == '__main__':
     
     for epoch in range(1, settings.EPOCH + 1):
       
-        train(epoch)
+        train(transformer, epoch)
         acc = eval_training(epoch)
         
         if epoch > settings.MILESTONES[1] and best_acc < acc:
