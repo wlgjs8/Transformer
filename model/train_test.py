@@ -12,7 +12,7 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-def train(epoch):
+def train(transformer, epoch):
     
     start = time.time()
     transformer.train()
