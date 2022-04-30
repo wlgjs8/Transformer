@@ -158,8 +158,8 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=os.path.join(
         settings.LOG_DIR, 'transformer', settings.TIME_NOW
     ))
-    input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
-    # input_tensor = np.arange(1, 2048, 1)
+    # input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
+    input_tensor = torch.Tensor(1, 2048)
     if args.gpu:
         input_tensor = input_tensor.cuda()
     writer.add_graph(transformer, input_tensor)
