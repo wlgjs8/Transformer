@@ -12,7 +12,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 sys.path.append('.')
@@ -28,34 +28,53 @@ import model.constants as Constants
 from model.transformer import Transformer
 from model.optim import ScheduledOptim
 
-def train(transformer, epoch):
+
+class FeatureDataset(Dataset):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        
+    def __len__(self):
+        return len(self.x_data)
+    
+    def __getitem__(self, idx):
+        x = self.x_data[idx]
+        y = self.y_data[idx]
+        return x, y
+
+
+def train(epoch):
 
     start = time.time()
 
     # transformer.train()
     transformer.cuda()
-    for batch_index, (feat, labels) in enumerate(zip(X_train, Y_train)):
+    trained_samples = 0
+    
+    for batch_index, (feat, labels) in enumerate(train_loader):
 
         feat = feat.cuda()
-        optimizer.zero_grad()
         
         outputs = transformer(feat)
+        outputs = outputs.reshape(-1, 100)
 
         labels = labels.to(torch.int64)
-        labels = labels.reshape(1)
         labels = labels.cuda()
 
         loss = loss_function(outputs, labels)
+        
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         n_iter = (epoch - 1) * len(Y_train) + batch_index + 1
+        trained_samples += len(feat)
 
-        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+        print('Training Epoch: {epoch} [{trained}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
             loss.item(),
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
-            trained_samples=batch_index * 1 + len(feat),
+            trained=trained_samples,
             total_samples=len(Y_train)
         ))
 
@@ -82,16 +101,18 @@ def eval_training(epoch=0, tb=True):
     test_loss = 0.0
     correct = 0.0
 
-    for (feat, labels) in zip(X_test, Y_test):
+    for (feat, labels) in test_loader:
 
         feat = feat.cuda()
+        
+        outputs = transformer(feat)
+        outputs = outputs.reshape(-1, 100)
+        
         labels = labels.to(torch.int64)
-        labels = labels.reshape(1)
         labels = labels.cuda()
 
-        outputs = transformer(feat)
         loss = loss_function(outputs, labels)
-
+        
         test_loss += loss.item()
         _, preds = outputs.max(1)
         correct += preds.eq(labels).sum()
@@ -105,8 +126,8 @@ def eval_training(epoch=0, tb=True):
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
         test_loss / len(Y_test),
-        correct.float() / len(Y_test)),
-        finish - start
+        correct.float() / len(Y_test),
+        finish - start)
     )
     print()
 
@@ -142,10 +163,15 @@ if __name__ == '__main__':
     X_train = torch.Tensor(np.load('output/cifar100_train_features.npy'))
     Y_train = torch.Tensor(np.load('output/cifar100_train_labels.npy'))
     print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
+    train_dataset = FeatureDataset(X_train, Y_train)
     
     X_test = torch.Tensor(np.load('output/cifar100_test_features.npy'))
     Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
     print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
+    test_dataset = FeatureDataset(X_test, Y_test)
+    
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
     
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
@@ -163,7 +189,7 @@ if __name__ == '__main__':
     best_acc = 0.0
     
     for epoch in range(1, settings.EPOCH + 1):
-        train(transformer, epoch)
+        train(epoch)
         acc = eval_training(epoch)
         
         if epoch > settings.MILESTONES[1] and best_acc < acc:
