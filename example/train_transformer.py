@@ -19,7 +19,7 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, CocoDataset, WarmUpLR, \
+from utils import get_network, CocoDataset, WarmUpLR, get_cifar100_train_dataloader, get_cifar100_test_dataloader, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
 from model.optim import ScheduledOptim
@@ -54,17 +54,12 @@ def train(epoch):
     for batch_index, (feat, labels) in enumerate(train_loader):
 
         feat = feat.cuda()
-        
         outputs = transformer(feat)
-        # print(outputs)
-        # outputs = outputs.reshape(-1, 100)
 
         labels = labels.to(torch.int64)
         labels = labels.cuda()
-        # labels = labels.reshape1)
 
         loss = loss_function(outputs, labels)
-
         
         optimizer.zero_grad()
         loss.backward()
@@ -78,7 +73,7 @@ def train(epoch):
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained=trained_samples,
-            total_samples=len(Y_train)
+            total_samples=Y_train.__len__()
         ))
 
         writer.add_scalar('Train/loss', loss.item(), n_iter)
@@ -127,8 +122,10 @@ def eval_training(epoch=0, tb=True):
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
-        test_loss / len(Y_test),
-        correct.float() / len(Y_test),
+        # test_loss / len(Y_test),
+        # correct.float() / len(Y_test),
+        test_loss / Y_test.__len__(),
+        correct.float() / Y_test.__len__(),
         finish - start)
     )
     print()
@@ -154,7 +151,24 @@ if __name__ == '__main__':
     d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
+    net = get_network(args)
+
+    cifar100_train_loader = get_cifar100_train_dataloader(
+        settings.CIFAR100_TRAIN_MEAN,
+        settings.CIFAR100_TRAIN_STD,
+        num_workers=4,
+        batch_size=64,
+    )
+
+    cifar100_test_loader = get_cifar100_test_dataloader(
+        settings.CIFAR100_TRAIN_MEAN,
+        settings.CIFAR100_TRAIN_STD,
+        num_workers=4,
+        batch_size=64,
+    )
+
     transformer = Transformer(
+        net=net,
         n_head=n_head,
         d_key=d_key,
         d_value=d_value,
@@ -163,23 +177,30 @@ if __name__ == '__main__':
         dropout=dropout,
     )
     
-    X_train = torch.Tensor(np.load('output/cifar100_train_features.npy'))
-    Y_train = torch.Tensor(np.load('output/cifar100_train_labels.npy'))
-    print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
-    train_dataset = FeatureDataset(X_train, Y_train)
+    # X_train = torch.Tensor(np.load('output/cifar100_train_features.npy'))
+    # Y_train = torch.Tensor(np.load('output/cifar100_train_labels.npy'))
+    # print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
+    # train_dataset = FeatureDataset(X_train, Y_train)
     
-    X_test = torch.Tensor(np.load('output/cifar100_test_features.npy'))
-    Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
-    print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
-    test_dataset = FeatureDataset(X_test, Y_test)
+    # X_test = torch.Tensor(np.load('output/cifar100_test_features.npy'))
+    # Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
+    # print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
+    # test_dataset = FeatureDataset(X_test, Y_test)
     
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
+    # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    # test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
     
+    train_loader = cifar100_train_loader
+    test_loader = cifar100_test_loader
+
+    X_train = train_loader
+    Y_train = test_loader
+
     loss_function = nn.CrossEntropyLoss()
     # loss_function = nn.MSELoss()
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
-    iter_per_epoch = len(X_train)
+    # iter_per_epoch = len(X_train)
+    iter_per_epoch = train_loader.__len__
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
     writer = SummaryWriter(log_dir=os.path.join(

@@ -13,18 +13,12 @@ class EncoderLayer(nn.Module):
     def __init__(self, d_model, d_inner, n_head, d_key, d_value, dropout=0.1):
         super().__init__()
 
-        # self.hidden_dim = hidden_dim
-        # self.num_head = num_head
-        # self.inner_dim = inner_dim
-
-        # self.MultiHeadAttention = MultiHeadAttention(num_head, inner_dim, inner_dim, inner_dim)
         self.MultiHeadAttention = MultiHeadAttention(n_head, d_model, d_key, d_value, dropout=dropout)
         self.PositionwiseFeedForward = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
         
 
     def forward(self, input, mask=None):
         output, _ = self.MultiHeadAttention(input, input, input, mask=mask)
-        # print(output.shape)
         output = output.view(-1, 1, input.shape[1])
         output = self.PositionwiseFeedForward(output)
         # output = output + output
@@ -49,7 +43,6 @@ class token_transformation(nn.Module):
         bbox_token = bbox_token.repeat(batch_size, 1)
         segm_token = segm_token.repeat(batch_size, 1)
         outputs = torch.cat([bbox_token, enc_srcs, segm_token], dim = 1)
-        # outputs = enc_srcs
 
         return outputs
 
@@ -58,7 +51,7 @@ class token_transformation(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, n_head, d_key, d_value, d_model, d_inner, dropout=0.1):
+    def __init__(self, net, n_head, d_key, d_value, d_model, d_inner, dropout=0.1):
         super().__init__()
         self.d_model = d_model
         self.fc = nn.Linear(d_model, 100)
@@ -67,9 +60,11 @@ class Transformer(nn.Module):
         self.token_transformation = token_transformation(d_model)
         self.encoder = EncoderLayer(d_model, d_inner, n_head, d_key, d_value, dropout=dropout)
         # self.decoder = DecoderLayer()
+        self.resnet = net
 
     def forward(self, enc_srcs):
-        output = self.token_transformation(enc_srcs)
+        output = self.resnet(enc_srcs)
+        output = self.token_transformation(output)
         output = self.encoder(output)
         output = self.fc(output).view(-1, 100)
         output = self.softmax(output)
