@@ -10,7 +10,7 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
 
         self.n_head = n_head
-        # self.d_model = d_model
+        self.d_model = d_model
         self.d_key = d_key
         self.d_value = d_value
 
@@ -51,7 +51,9 @@ class MultiHeadAttention(nn.Module):
 
         query = query.transpose(1, 2).contiguous().view(size_batch, len_query, -1)
         query = self.dropout(self.fc(query))
-        query += residual.reshape(-1, 1, 2050)
+        query += residual.reshape(-1, 1, self.d_model)
+        # query += residual.reshape(-1, batch_size, )
+
 
         query = self.layer_norm(query)
 

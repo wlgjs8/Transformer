@@ -56,12 +56,15 @@ def train(epoch):
         feat = feat.cuda()
         
         outputs = transformer(feat)
-        outputs = outputs.reshape(-1, 100)
+        # print(outputs)
+        # outputs = outputs.reshape(-1, 100)
 
         labels = labels.to(torch.int64)
         labels = labels.cuda()
+        # labels = labels.reshape1)
 
         loss = loss_function(outputs, labels)
+
         
         optimizer.zero_grad()
         loss.backward()
@@ -106,7 +109,6 @@ def eval_training(epoch=0, tb=True):
         feat = feat.cuda()
         
         outputs = transformer(feat)
-        outputs = outputs.reshape(-1, 100)
         
         labels = labels.to(torch.int64)
         labels = labels.cuda()
@@ -148,6 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     args = parser.parse_args()
     
+    # d_key, d_value, d_model, d_inner, n_head, dropout = 1024, 1024, 2048, 512, 2, 0.1
     d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
@@ -174,6 +177,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
     
     loss_function = nn.CrossEntropyLoss()
+    # loss_function = nn.MSELoss()
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
     iter_per_epoch = len(X_train)
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
