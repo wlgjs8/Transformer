@@ -65,7 +65,7 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        n_iter = (epoch - 1) * len(Y_train) + batch_index + 1
+        n_iter = (epoch - 1) * train_loader.__len__() + batch_index + 1
         trained_samples += len(feat)
 
         print('Training Epoch: {epoch} [{trained}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
@@ -73,7 +73,7 @@ def train(epoch):
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained=trained_samples,
-            total_samples=Y_train.__len__()
+            total_samples=50000
         ))
 
         writer.add_scalar('Train/loss', loss.item(), n_iter)
@@ -124,17 +124,17 @@ def eval_training(epoch=0, tb=True):
         epoch,
         # test_loss / len(Y_test),
         # correct.float() / len(Y_test),
-        test_loss / Y_test.__len__(),
-        correct.float() / Y_test.__len__(),
+        test_loss / test_loader.__len__(),
+        correct.float() / test_loader.__len__(),
         finish - start)
     )
     print()
 
     if tb:
-        writer.add_scalar('Test/Average loss', test_loss / len(Y_test), epoch)
-        writer.add_scalar('Test/Accuracy', correct.float() / len(Y_test), epoch)
+        writer.add_scalar('Test/Average loss', test_loss / test_loader.__len__(), epoch)
+        writer.add_scalar('Test/Accuracy', correct.float() / test_loader.__len__(), epoch)
 
-    return correct.float() / len(Y_test)
+    return correct.float() / test_loader.__len__()
 
 
 if __name__ == '__main__':
@@ -149,6 +149,9 @@ if __name__ == '__main__':
     
     # d_key, d_value, d_model, d_inner, n_head, dropout = 1024, 1024, 2048, 512, 2, 0.1
     d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
+    if args.net == 'resnet18':
+        d_key, d_value, d_model, d_inner, n_head, dropout = 257, 257, 514, 514, 2, 0.1
+
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
     net = get_network(args)
@@ -193,14 +196,11 @@ if __name__ == '__main__':
     train_loader = cifar100_train_loader
     test_loader = cifar100_test_loader
 
-    X_train = train_loader
-    Y_train = test_loader
-
     loss_function = nn.CrossEntropyLoss()
     # loss_function = nn.MSELoss()
     optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
     # iter_per_epoch = len(X_train)
-    iter_per_epoch = train_loader.__len__
+    iter_per_epoch = train_loader.__len__()
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
     writer = SummaryWriter(log_dir=os.path.join(
