@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 # from torchvision.transforms import transform_COCO
 from torch.utils.data import DataLoader, Dataset
 
-from resnet import resnet50, resnet101
+from resnet import resnet18, resnet34, resnet50, resnet101
 
 from pycocotools.coco import COCO
 
@@ -26,6 +26,12 @@ def get_network(args):
 
     elif args.net == 'resnet101':
         net = resnet101()
+
+    elif args.net == 'resnet18':
+        net = resnet18()
+
+    elif args.net == 'resnet34':
+        net = resnet34()
 
     else:
         print('the network name you have entered is not supported yet')
@@ -47,10 +53,6 @@ def get_cifar100_train_dataloader(mean, std, batch_size=64, num_workers=4, shuff
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
-
-    print()
-    print(os.getcwd())
-    print()
 
     cifar100_training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
     cifar100_training_loader = DataLoader(
