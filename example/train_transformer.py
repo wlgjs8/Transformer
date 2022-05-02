@@ -41,14 +41,12 @@ def train(transformer, epoch):
         optimizer.zero_grad()
         
         outputs = transformer(feat)
-        print(outputs)
 
         labels = labels.to(torch.int64)
-        labels = labels.reshape(1, 1)
-
+        labels = labels.reshape(1)
         labels = labels.cuda()
-        loss = loss_function(outputs, torch.max(labels, 1)[1])
-        # loss = loss_function(outputs, labels)
+
+        loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
 
@@ -131,7 +129,6 @@ if __name__ == '__main__':
     best_acc = 0.0
     
     for epoch in range(1, settings.EPOCH + 1):
-      
         train(transformer, epoch)
         acc = eval_training(epoch)
         
