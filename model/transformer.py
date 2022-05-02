@@ -25,7 +25,7 @@ class EncoderLayer(nn.Module):
     def forward(self, input, mask=None):
         output, _ = self.MultiHeadAttention(input, input, input, mask=mask)
         # print(output.shape)
-        output = output.view(-1, 1, 2050)
+        output = output.view(-1, 1, input.shape[1])
         output = self.PositionwiseFeedForward(output)
         # output = output + output
 
@@ -37,27 +37,24 @@ class token_transformation(nn.Module):
         super().__init__()
 
         self.d_model = d_model
+        self.bbox_token = torch.zeros(1)
+        self.segm_token = torch.zeros(1)
 
-        # self.bbox_token = nn.Parameters(torch.zeros(1, 1, d_model))
-        # self.segm_token = nn.Parameters(torch.zeros(1, 1, d_model))
-        self.bbox_token = None
-        self.segm_token = None
+    def forward(self, enc_srcs):
+        batch_size = enc_srcs.shape[0]
 
-    def forward(self, enc_src):
-        batch_size = enc_src.shape[0]
-        self.bbox_token = torch.zeros(batch_size, 1)
-        self.segm_token = torch.zeros(batch_size, 1)
-
-        self.bbox_token = self.bbox_token.cuda()
-        self.segm_token = self.segm_token.cuda()
+        bbox_token = self.bbox_token.cuda()
+        segm_token = self.segm_token.cuda()
         
-        enc_src = torch.cat([self.bbox_token, enc_src, self.segm_token], dim = 1)
+        bbox_token = bbox_token.repeat(batch_size, 1)
+        segm_token = segm_token.repeat(batch_size, 1)
+        outputs = torch.cat([bbox_token, enc_srcs, segm_token], dim = 1)
+        # outputs = enc_srcs
 
-        return enc_src
+        return outputs
 
 # class DecoderLayer(nn.Module):
 #     def __init__(feat, bbox_token, segm_token):
-
 
 
 class Transformer(nn.Module):
@@ -71,10 +68,10 @@ class Transformer(nn.Module):
         self.encoder = EncoderLayer(d_model, d_inner, n_head, d_key, d_value, dropout=dropout)
         # self.decoder = DecoderLayer()
 
-    def forward(self, enc_src):
-        output = self.token_transformation(enc_src)
+    def forward(self, enc_srcs):
+        output = self.token_transformation(enc_srcs)
         output = self.encoder(output)
-        output = self.fc(output)
+        output = self.fc(output).view(-1, 100)
         output = self.softmax(output)
 
         return output
