@@ -24,7 +24,8 @@ class EncoderLayer(nn.Module):
 
     def forward(self, input, mask=None):
         output, _ = self.MultiHeadAttention(input, input, input, mask=mask)
-        output = output.view(1, 2050)
+        # print(output.shape)
+        output = output.view(-1, 1, 2050)
         output = self.PositionwiseFeedForward(output)
         # output = output + output
 
@@ -39,15 +40,18 @@ class token_transformation(nn.Module):
 
         # self.bbox_token = nn.Parameters(torch.zeros(1, 1, d_model))
         # self.segm_token = nn.Parameters(torch.zeros(1, 1, d_model))
-        self.bbox_token = torch.zeros(1)
-        self.segm_token = torch.zeros(1)
+        self.bbox_token = None
+        self.segm_token = None
 
     def forward(self, enc_src):
+        batch_size = enc_src.shape[0]
+        self.bbox_token = torch.zeros(batch_size, 1)
+        self.segm_token = torch.zeros(batch_size, 1)
 
         self.bbox_token = self.bbox_token.cuda()
         self.segm_token = self.segm_token.cuda()
-
-        enc_src = torch.cat([self.bbox_token, enc_src, self.segm_token], dim = 0)
+        
+        enc_src = torch.cat([self.bbox_token, enc_src, self.segm_token], dim = 1)
 
         return enc_src
 

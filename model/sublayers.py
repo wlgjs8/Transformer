@@ -29,7 +29,7 @@ class MultiHeadAttention(nn.Module):
 
         d_key, d_value, n_head = self.d_key, self.d_value, self.n_head
         # size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1), value.size(1)
-        size_batch = 1
+        size_batch = query.shape[0]
         # print(query.size(0))
 
         len_query = 1
@@ -51,7 +51,7 @@ class MultiHeadAttention(nn.Module):
 
         query = query.transpose(1, 2).contiguous().view(size_batch, len_query, -1)
         query = self.dropout(self.fc(query))
-        query += residual
+        query += residual.reshape(-1, 1, 2050)
 
         query = self.layer_norm(query)
 
