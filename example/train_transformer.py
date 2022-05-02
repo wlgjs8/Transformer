@@ -22,8 +22,6 @@ from config import settings
 from utils import get_network, CocoDataset, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
-from train_test import train, eval_training
-    
 from model.optim import ScheduledOptim
 
 import model.constants as Constants
@@ -33,6 +31,7 @@ from model.optim import ScheduledOptim
 def train(transformer, epoch):
 
     start = time.time()
+
     # transformer.train()
     transformer.cuda()
     for batch_index, (feat, labels) in enumerate(zip(X_train, Y_train)):
@@ -60,21 +59,63 @@ def train(transformer, epoch):
             total_samples=len(Y_train)
         ))
 
-        #update training loss for each iteration
         writer.add_scalar('Train/loss', loss.item(), n_iter)
 
-        # if epoch <= args.warm:
-        #     optimizer.step()
+        if epoch <= args.warm:
+            optimizer.step()
             
-    # for name, param in transformer.named_parameters():
-    #     layer, attr = os.path.splitext(name)
-    #     attr = attr[1:]
-    #     writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
+    for name, param in transformer.named_parameters():
+        layer, attr = os.path.splitext(name)
+        attr = attr[1:]
+        writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
         
     finish = time.time()
     
     print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
     
+@torch.no_grad()
+def eval_training(epoch=0, tb=True):
+
+    start = time.time()
+    transformer.eval()
+
+    test_loss = 0.0
+    correct = 0.0
+
+    for (feat, labels) in zip(X_test, Y_test):
+
+        feat = feat.cuda()
+        labels = labels.to(torch.int64)
+        labels = labels.reshape(1)
+        labels = labels.cuda()
+
+        outputs = transformer(feat)
+        loss = loss_function(outputs, labels)
+
+        test_loss += loss.item()
+        _, preds = outputs.max(1)
+        correct += preds.eq(labels).sum()
+
+    finish = time.time()
+    if args.gpu:
+        print('GPU INFO.....')
+        print(torch.cuda.memory_summary(), end='')
+
+    print('Evaluating Network.....')
+    print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
+        epoch,
+        test_loss / len(Y_test),
+        correct.float() / len(Y_test)),
+        finish - start
+    )
+    print()
+
+    if tb:
+        writer.add_scalar('Test/Average loss', test_loss / len(Y_test), epoch)
+        writer.add_scalar('Test/Accuracy', correct.float() / len(Y_test), epoch)
+
+    return correct.float() / len(Y_test)
+
 
 if __name__ == '__main__':
 
@@ -86,7 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     args = parser.parse_args()
     
-    d_key, d_value, d_model, d_inner, n_head, dropout = 1024, 1024, 2048, 512, 2, 0.1
+    d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
     transformer = Transformer(
@@ -111,16 +152,9 @@ if __name__ == '__main__':
     iter_per_epoch = len(X_train)
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
-    ## log 작성??
     writer = SummaryWriter(log_dir=os.path.join(
         settings.LOG_DIR, 'transformer', settings.TIME_NOW
     ))
-    # input_tensor = torch.Tensor(1, 3, 32, 32)           ## input tensor 사이즈 변경 필요
-    # input_tensor = np.arange(1, 2048, 1)
-    # input_tensor = torch.Tensor(input_tensor)
-
-    # input_tensor = input_tensor.cuda()
-    # writer.add_graph(transformer, input_tensor)
 
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
