@@ -64,7 +64,7 @@ class BottleNeck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, num_block, num_classes=100, cifar100=False):
+    def __init__(self, block, num_block, num_classes=100):
         super().__init__()
 
         self.in_channels = 64
@@ -73,9 +73,6 @@ class ResNet(nn.Module):
             nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True))
-
-        #we use a different inputsize than the original paper
-        #so conv2_x's stride is 1
 
         self.conv2_x = self._make_layer(block, 64, num_block[0], 1)
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
@@ -106,6 +103,46 @@ class ResNet(nn.Module):
 
         return output
 
+
+class ConvBlocks(nn.Module):
+    def __init__(self, num_channels, num_classes=100):
+        super().__init__()
+
+        self.conv_block1 = nn.Sequential(
+            nn.Conv2d(3, num_channels[0],  kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_channels[0]),
+            nn.ReLU(inplace=True),
+        )
+        self.conv_block2 = nn.Sequential(
+            nn.Conv2d(num_channels[0], num_channels[1],  kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_channels[1]),
+            nn.ReLU(inplace=True),
+        )
+        self.conv_block3 = nn.Sequential(
+            nn.Conv2d(num_channels[1], num_channels[2],  kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_channels[2]),
+            nn.ReLU(inplace=True),
+        )
+        self.conv_block4 = nn.Sequential(
+            nn.Conv2d(num_channels[2], num_channels[3],  kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(num_channels[3]),
+            nn.ReLU(inplace=True),
+        )
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.fc = nn.Linear(512 * block.expansion, num_classes)
+
+    def forward(self, x):
+        output = self.conv_block1(x)
+        output = self.conv_block2(output)
+        output = self.conv_block3(output)
+        output = self.conv_block4(output)
+        output = self.avg_pool(output)
+        # output = torch.flatten(output, 1)
+        # print('flatten outputs : ', output.shape)
+        output = output.view(output.size(0), -1)
+
+        return output
+
 def resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
@@ -117,3 +154,6 @@ def resnet50():
 
 def resnet101():
     return ResNet(BottleNeck, [3, 4, 23, 3])
+
+def conv_blocks():
+    return ConvBlocks([32, 64, 128, 256])
