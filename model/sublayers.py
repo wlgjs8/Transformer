@@ -38,6 +38,7 @@ class MultiHeadAttention(nn.Module):
 
         residual = query
 
+        print(query.shape)
         query = self.w_query(query).view(size_batch, len_query, n_head, d_key)
         key = self.w_key(key).view(size_batch, len_key, n_head, d_key)
         value = self.w_value(value).view(size_batch, len_value, n_head, d_value)
