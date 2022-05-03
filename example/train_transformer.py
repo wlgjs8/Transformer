@@ -149,8 +149,8 @@ if __name__ == '__main__':
     
     # d_key, d_value, d_model, d_inner, n_head, dropout = 256, 256, 2048, 2048, 8, 0.1
     # d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
-    if args.net == 'resnet34':
-        d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 512, 512, 8, 0.1
+    if args.net == 'conv':
+        d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 256, 256, 4, 0.1
         # d_key, d_value, d_model, d_inner, n_head, dropout = 512, 512, 2048, 2048, 4, 0.1
         # d_key, d_value, d_model, d_inner, n_head, dropout = 257, 257, 514, 514, 2, 0.1
 
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     
     writer = SummaryWriter(log_dir=os.path.join(
-        settings.LOG_DIR, 'transformer', settings.TIME_NOW
+        settings.LOG_DIR, 'convblock', settings.TIME_NOW
     ))
 
     if not os.path.exists(checkpoint_path):

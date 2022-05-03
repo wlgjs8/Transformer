@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 # from torchvision.transforms import transform_COCO
 from torch.utils.data import DataLoader, Dataset
 
-from resnet import resnet18, resnet34, resnet50, resnet101
+from resnet import resnet18, resnet34, resnet50, resnet101, conv_blocks
 
 from pycocotools.coco import COCO
 
@@ -32,7 +32,9 @@ def get_network(args):
 
     elif args.net == 'resnet34':
         net = resnet34()
-
+        
+    elif args.net == 'conv':
+        net = conv_blocks()
     else:
         print('the network name you have entered is not supported yet')
         sys.exit()

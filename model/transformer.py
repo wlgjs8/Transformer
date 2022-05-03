@@ -15,7 +15,6 @@ class EncoderLayer(nn.Module):
 
         self.MultiHeadAttention = MultiHeadAttention(n_head, d_model, d_key, d_value, dropout=dropout)
         self.PositionwiseFeedForward = PositionwiseFeedForward(d_model, d_inner, dropout=dropout)
-        
 
     def forward(self, input, mask=None):
         output, _ = self.MultiHeadAttention(input, input, input, mask=mask)
