@@ -40,9 +40,10 @@ class token_transformation(nn.Module):
         bbox_token = self.bbox_token.cuda()
         segm_token = self.segm_token.cuda()
         
-        bbox_token = bbox_token.repeat(batch_size, 1)
-        segm_token = segm_token.repeat(batch_size, 1)
-        outputs = torch.cat([bbox_token, enc_srcs, segm_token], dim = 1)
+        # bbox_token = bbox_token.repeat(batch_size, 1)
+        # segm_token = segm_token.repeat(batch_size, 1)
+        # outputs = torch.cat([bbox_token, enc_srcs, segm_token], dim = 1)
+        outputs = enc_srcs
 
         return outputs
 
