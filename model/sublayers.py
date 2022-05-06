@@ -49,7 +49,7 @@ class MultiHeadAttention(nn.Module):
         
         query, attn = self.attention(query, key, value, mask=mask)
 
-        query = query.transpose(1, 2).contiguous().view(size_batch, len_query, -1)
+        query = query.transpose(1, 2).contiguous().view(size_batch, len_query, -1) 
         query = self.dropout(self.fc(query))
         query += residual.reshape(-1, 1, self.d_model)
         # query += residual.reshape(-1, batch_size, )

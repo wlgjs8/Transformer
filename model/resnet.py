@@ -99,7 +99,8 @@ class ResNet(nn.Module):
         output = self.conv5_x(output)
         output = self.avg_pool(output)
         output = output.view(output.size(0), -1)
-        # output = self.fc(output)
+
+        output = self.fc(output)
 
         return output
 
@@ -142,6 +143,50 @@ class ConvBlocks(nn.Module):
         output = output.view(output.size(0), -1)
 
         return output
+
+
+class RegressionModel(nn.Module):
+    def __init__(self, net, features=3, num_anchors=9, feature_size=256):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(features, feature_size, kernel_size=3, padding=1)
+        self.act1 = nn.ReLU()
+
+        self.conv2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act2 = nn.ReLU()
+
+        self.conv3 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act3 = nn.ReLU()
+
+        self.conv4 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act4 = nn.ReLU()
+
+        self.output = nn.Conv2d(feature_size, num_anchors * 4, kernel_size=3, padding=1)
+
+        self.resnet = net
+
+    def forward(self, x):
+        x = self.resnet(x)
+        print('x : ', x.shape)
+        
+        out = self.conv1(x)
+        out = self.act1(out)
+
+        out = self.conv2(out)
+        out = self.act2(out)
+
+        out = self.conv3(out)
+        out = self.act3(out)
+
+        out = self.conv4(out)
+        out = self.act4(out)
+
+        out = self.output(out)
+
+        # out is B x C x W x H, with C = 4*num_anchors
+        out = out.permute(0, 2, 3, 1)
+
+        return out.contiguous().view(out.shape[0], -1, 4)
 
 def resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])

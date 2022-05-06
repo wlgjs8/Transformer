@@ -66,6 +66,7 @@ class Transformer(nn.Module):
         output = self.resnet(enc_srcs)
         output = self.token_transformation(output)
         output = self.encoder(output)
+
         output = self.fc(output).view(-1, 100)
         output = self.softmax(output)
 

@@ -62,7 +62,7 @@ if __name__ == '__main__':
         print(outputs.shape)
         
         ## saving cifar100 features ([10000, 2048])
-        np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
+        # np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
 
     else:
         print(net)
