@@ -64,9 +64,10 @@ class Transformer(nn.Module):
 
     def forward(self, enc_srcs):
         output = self.resnet(enc_srcs)
-        output = self.token_transformation(output)
+        # output = self.token_transformation(output)
         output = self.encoder(output)
-
+        print('MLS output : ', output.shape)
+        
         output = self.fc(output).view(-1, 100)
         output = self.softmax(output)
 

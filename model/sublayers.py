@@ -14,11 +14,13 @@ class MultiHeadAttention(nn.Module):
         self.d_key = d_key
         self.d_value = d_value
 
-        # self.w_query = nn.Linear(d_model, n_head * d_key)
-        self.w_query = nn.Linear(d_model, d_model)
-        self.w_key = nn.Linear(d_model, d_model)
-        self.w_value = nn.Linear(d_model, d_model)
-        self.fc = nn.Linear(d_model, d_model)
+        # self.w_query = nn.Linear(d_model, d_model)
+        # self.w_key = nn.Linear(d_model, d_model)
+        # self.w_value = nn.Linear(d_model, d_model)
+        self.w_query = nn.Linear(d_model, n_head * d_key, bias=False)
+        self.w_key = nn.Linear(d_model, n_head * d_key)
+        self.w_value = nn.Linear(d_model, n_head * d_value)
+        self.fc = nn.Linear(n_head * d_value, d_model)
 
         self.attention = ScaledDotProductAttention(temperature = d_key ** 0.5)
         self.attention_sigmoid = SigmoidScaledDotProductAttention(temperature = d_key ** 0.5)
@@ -28,17 +30,35 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key, value, mask=None):
 
         d_key, d_value, n_head = self.d_key, self.d_value, self.n_head
-        # size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1), value.size(1)
-        size_batch = query.shape[0]
+        size_batch, len_query, len_key, len_value = query.size(0), query.size(1), key.size(1), value.size(1)
+        print('query.shape : ', query.shape)
+        print('query.size(0), query.size(1), key.size(1), value.size(1) : ', query.size(0), query.size(1), key.size(1), value.size(1))
+
+        # size_batch = query.shape[0]
         # print(query.size(0))
 
-        len_query = 1
-        len_key = 1
-        len_value = 1
+        # len_query = 1
+        # len_key = 1
+        # len_value = 1
 
         residual = query
 
-        query = self.w_query(query).view(size_batch, len_query, n_head, d_key)
+        print('bef attn query : ', query.shape)
+        print('size_batch, len_query, n_head, d_key : ', size_batch, len_query, n_head, d_key)
+
+        # rand_query = np.zeros(512)
+        # rand_query = torch.Tensor(rand_query).cuda()
+        # print('rand_query : ', rand_query.shape)
+        # rand_query = self.w_query(rand_query)
+        # print('rand_query : ', rand_query.shape)
+        # rand_query = rand_query.view(1, len_query, n_head, d_key)
+        # print('rand_query : ', rand_query.shape)
+
+        query = self.w_query(query)
+        print('aft attn query : ', query.shape)
+        query = query.view(size_batch, len_query, n_head, d_key)
+        print('aft attn query : ', query.shape)
+
         key = self.w_key(key).view(size_batch, len_key, n_head, d_key)
         value = self.w_value(value).view(size_batch, len_value, n_head, d_value)
 

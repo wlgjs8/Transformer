@@ -10,8 +10,8 @@ class BasicBlock(nn.Module):
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels * BasicBlock.expansion, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels * BasicBlock.expansion, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels * BasicBlock.expansion),
         )
 
@@ -28,9 +28,9 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        x = self.residual_function(x) + self.shortcut(x)
-        x = self.relu(x)
-        return x
+        # x = self.residual_function(x) + self.shortcut(x)
+        # x = self.relu(x)
+        return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
 
 class BottleNeck(nn.Module):
 
@@ -97,10 +97,10 @@ class ResNet(nn.Module):
         output = self.conv3_x(output)
         output = self.conv4_x(output)
         output = self.conv5_x(output)
-        output = self.avg_pool(output)
-        output = output.view(output.size(0), -1)
 
-        output = self.fc(output)
+        # output = self.avg_pool(output)
+        # output = output.view(output.size(0), -1)
+        # output = self.fc(output)
 
         return output
 
@@ -137,9 +137,8 @@ class ConvBlocks(nn.Module):
         output = self.conv_block2(output)
         output = self.conv_block3(output)
         output = self.conv_block4(output)
-        output = self.avg_pool(output)
+        # output = self.avg_pool(output)
         # output = torch.flatten(output, 1)
-        # print('flatten outputs : ', output.shape)
         output = output.view(output.size(0), -1)
 
         return output
