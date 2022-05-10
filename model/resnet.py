@@ -6,21 +6,17 @@ class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
 
-        # BatchNorm에 bias가 포함되어 있으므로, conv2d는 bias=False로 설정합니다.
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels * BasicBlock.expansion, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels * BasicBlock.expansion, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels * BasicBlock.expansion),
         )
 
-        # identity mapping, input과 output의 feature map size, filter 수가 동일한 경우 사용.
         self.shortcut = nn.Sequential()
-
         self.relu = nn.ReLU()
 
-        # projection mapping using 1x1conv
         if stride != 1 or in_channels != BasicBlock.expansion * out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels * BasicBlock.expansion, kernel_size=1, stride=stride, bias=False),
@@ -28,14 +24,11 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        x = self.residual_function(x) + self.shortcut(x)
-        x = self.relu(x)
-        return x
+        return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
 
 class BottleNeck(nn.Module):
 
     expansion = 4
-
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
 
@@ -78,8 +71,8 @@ class ResNet(nn.Module):
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
         self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        # self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.fc = nn.Linear(512 * block.expansion, num_classes)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
 
@@ -97,8 +90,9 @@ class ResNet(nn.Module):
         output = self.conv3_x(output)
         output = self.conv4_x(output)
         output = self.conv5_x(output)
-        output = self.avg_pool(output)
-        output = output.view(output.size(0), -1)
+
+        # output = self.avg_pool(output)
+        # output = output.view(output.size(0), -1)
         # output = self.fc(output)
 
         return output
@@ -136,12 +130,55 @@ class ConvBlocks(nn.Module):
         output = self.conv_block2(output)
         output = self.conv_block3(output)
         output = self.conv_block4(output)
-        output = self.avg_pool(output)
+        # output = self.avg_pool(output)
         # output = torch.flatten(output, 1)
-        # print('flatten outputs : ', output.shape)
         output = output.view(output.size(0), -1)
 
         return output
+
+
+class RegressionModel(nn.Module):
+    def __init__(self, net, features=3, num_anchors=9, feature_size=256):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(features, feature_size, kernel_size=3, padding=1)
+        self.act1 = nn.ReLU()
+
+        self.conv2 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act2 = nn.ReLU()
+
+        self.conv3 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act3 = nn.ReLU()
+
+        self.conv4 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
+        self.act4 = nn.ReLU()
+
+        self.output = nn.Conv2d(feature_size, num_anchors * 4, kernel_size=3, padding=1)
+
+        self.resnet = net
+
+    def forward(self, x):
+        x = self.resnet(x)
+        print('x : ', x.shape)
+        
+        out = self.conv1(x)
+        out = self.act1(out)
+
+        out = self.conv2(out)
+        out = self.act2(out)
+
+        out = self.conv3(out)
+        out = self.act3(out)
+
+        out = self.conv4(out)
+        out = self.act4(out)
+
+        out = self.output(out)
+
+        # out is B x C x W x H, with C = 4*num_anchors
+        out = out.permute(0, 2, 3, 1)
+
+        return out.contiguous().view(out.shape[0], -1, 4)
 
 def resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
