@@ -6,7 +6,6 @@ class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
 
-        # BatchNorm에 bias가 포함되어 있으므로, conv2d는 bias=False로 설정합니다.
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
@@ -15,12 +14,9 @@ class BasicBlock(nn.Module):
             nn.BatchNorm2d(out_channels * BasicBlock.expansion),
         )
 
-        # identity mapping, input과 output의 feature map size, filter 수가 동일한 경우 사용.
         self.shortcut = nn.Sequential()
-
         self.relu = nn.ReLU()
 
-        # projection mapping using 1x1conv
         if stride != 1 or in_channels != BasicBlock.expansion * out_channels:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels * BasicBlock.expansion, kernel_size=1, stride=stride, bias=False),
@@ -28,14 +24,11 @@ class BasicBlock(nn.Module):
             )
 
     def forward(self, x):
-        # x = self.residual_function(x) + self.shortcut(x)
-        # x = self.relu(x)
         return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
 
 class BottleNeck(nn.Module):
 
     expansion = 4
-
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
 
@@ -78,8 +71,8 @@ class ResNet(nn.Module):
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
         self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
-        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        # self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        # self.fc = nn.Linear(512 * block.expansion, num_classes)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
 

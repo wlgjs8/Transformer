@@ -29,25 +29,11 @@ from model.transformer import Transformer
 from model.optim import ScheduledOptim
 
 
-class FeatureDataset(Dataset):
-    def __init__(self, x, y):
-        self.x_data = x
-        self.y_data = y
-        
-    def __len__(self):
-        return len(self.x_data)
-    
-    def __getitem__(self, idx):
-        x = self.x_data[idx]
-        y = self.y_data[idx]
-        return x, y
-
-
 def train(epoch):
 
     start = time.time()
 
-    # transformer.train()
+    transformer.train()
     transformer.cuda()
     trained_samples = 0
     
@@ -59,6 +45,7 @@ def train(epoch):
         labels = labels.to(torch.int64)
         labels = labels.cuda()
 
+        # print('train outputs : ', outputs.shape)
         loss = loss_function(outputs, labels)
         
         optimizer.zero_grad()
@@ -81,10 +68,10 @@ def train(epoch):
         if epoch <= args.warm:
             warmup_scheduler.step()
             
-    for name, param in transformer.named_parameters():
-        layer, attr = os.path.splitext(name)
-        attr = attr[1:]
-        writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
+    # for name, param in transformer.named_parameters():
+    #     layer, attr = os.path.splitext(name)
+    #     attr = attr[1:]
+    #     writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
         
     finish = time.time()
     
@@ -98,11 +85,12 @@ def eval_training(epoch=0, tb=True):
 
     test_loss = 0.0
     correct = 0.0
+    correct_1 = 0.0
+    correct_5 = 0.0
 
-    for (feat, labels) in test_loader:
+    for n_iter, (feat, labels) in enumerate(test_loader):
 
         feat = feat.cuda()
-        
         outputs = transformer(feat)
         
         labels = labels.to(torch.int64)
@@ -113,6 +101,12 @@ def eval_training(epoch=0, tb=True):
         test_loss += loss.item()
         _, preds = outputs.max(1)
         correct += preds.eq(labels).sum()
+
+        _, pred = outputs.topk(5, 1, largest=True, sorted=True)
+        label = labels.view(labels.size(0), -1).expand_as(pred)
+        corrects = pred.eq(label).float()
+        correct_5 += corrects[:, :5].sum()
+        correct_1 += corrects[:, :1].sum()
 
     finish = time.time()
 
@@ -125,6 +119,8 @@ def eval_training(epoch=0, tb=True):
         correct.float() / test_loader.__len__(),
         finish - start)
     )
+    print("Top 1 correct: ", correct_1 / len(cifar100_test_loader.dataset))
+    print("Top 5 correct: ", correct_5 / len(cifar100_test_loader.dataset))
     print()
 
     if tb:
@@ -146,7 +142,7 @@ if __name__ == '__main__':
     
     if args.net == 'resnet34':
         # d_key, d_value, d_model, d_inner, n_head, dropout = 256, 256, 2048, 2048, 8, 0.1
-        d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 512, 2048, 8, 0.1
+        d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 768, 2048, 8, 0.1
     else:
         d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 256, 256, 4, 0.1
 
@@ -158,14 +154,14 @@ if __name__ == '__main__':
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
-        batch_size=256,
+        batch_size=128,
     )
 
     cifar100_test_loader = get_cifar100_test_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
-        batch_size=256,
+        batch_size=128,
     )
 
     transformer = Transformer(
@@ -177,16 +173,6 @@ if __name__ == '__main__':
         d_inner=d_inner,
         dropout=dropout,
     )
-    
-    # X_train = torch.Tensor(np.load('output/cifar100_train_features.npy'))
-    # Y_train = torch.Tensor(np.load('output/cifar100_train_labels.npy'))
-    # print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
-    # train_dataset = FeatureDataset(X_train, Y_train)
-    
-    # X_test = torch.Tensor(np.load('output/cifar100_test_features.npy'))
-    # Y_test = torch.Tensor(np.load('output/cifar100_test_labels.npy'))
-    # print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
-    # test_dataset = FeatureDataset(X_test, Y_test)
     
     # train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
     # test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
