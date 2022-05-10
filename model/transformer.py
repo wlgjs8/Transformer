@@ -39,14 +39,14 @@ class PatchEmbedding(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, d_model))
         # self.bbox_token = torch.zeros(1)
         # self.segm_token = torch.zeros(1)
-        self.conv = nn.Conv2d(512, d_model, kernel_size=1, stride=1)
+        self.conv = nn.Conv2d(512, d_model, kernel_size=2, stride=2)
 
     def forward(self, enc_srcs):
         batch_size = enc_srcs.shape[0]
         cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = batch_size)
 
         outputs = self.conv(enc_srcs)
-        outputs = outputs.reshape(batch_size, 16, -1)
+        outputs = outputs.reshape(batch_size, 196, -1)
         outputs = torch.cat([outputs, cls_tokens], dim=1)
 
         # bbox_token = self.bbox_token.cuda()
@@ -60,7 +60,7 @@ class PatchEmbedding(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, net, n_head, d_key, d_value, d_model, d_inner, dropout=0.1):
+    def __init__(self, net, n_head, d_key, d_value, d_model, d_inner, num_classes=20, dropout=0.1):
         super().__init__()
         self.d_model = d_model
 
@@ -70,6 +70,11 @@ class Transformer(nn.Module):
         # self.decoder = DecoderLayer()
         self.fc = nn.Linear(13056, 100)
         self.softmax = nn.LogSoftmax(dim=1)
+        self.to_latent = nn.Identity()
+        self.mlp_head = nn.Sequential(
+            nn.LayerNorm(d_model),
+            nn.Linear(d_model, num_classes)
+        )
         
     def forward(self, enc_srcs):
 
@@ -91,11 +96,8 @@ class Transformer(nn.Module):
         # print('MLS output : ', output.shape)
         # print()
 
-        output = torch.flatten(output, 1)
-        # print('output : ', output.shape)
-        # print()
-
-        output = self.fc(output).view(-1, 100)
-        output = self.softmax(output)
-
+        output = output[:, 0]
+        output = self.to_latent(output)
+        output = self.mlp_head(output)
+        
         return output

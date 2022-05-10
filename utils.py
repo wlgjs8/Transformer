@@ -26,6 +26,7 @@ object_categories = ['aeroplane', 'bicycle', 'bird', 'boat',
                      'motorbike', 'person', 'pottedplant',
                      'sheep', 'sofa', 'train', 'tvmonitor']
 
+
 def get_network(args):
 
     if args.net == 'resnet50':
@@ -53,7 +54,7 @@ def get_network(args):
 
 
 def get_cifar100_train_dataloader(mean, std, batch_size=64, num_workers=4, shuffle=True):
-    
+  
     transform_train = transforms.Compose([
         #transforms.ToPILImage(),
         transforms.RandomCrop(32, padding=4),
@@ -254,6 +255,7 @@ def best_acc_weights(weights_folder):
 
     best_files = sorted(best_files, key=lambda w: int(re.search(regex_str, w).groups()[1]))
     return best_files[-1]
+
 
 def encode_labels(target):
     """

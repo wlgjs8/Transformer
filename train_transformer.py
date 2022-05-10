@@ -29,11 +29,25 @@ from model.transformer import Transformer
 from model.optim import ScheduledOptim
 
 
+class FeatureDataset(Dataset):
+    def __init__(self, x, y):
+        self.x_data = x
+        self.y_data = y
+        
+    def __len__(self):
+        return len(self.x_data)
+    
+    def __getitem__(self, idx):
+        x = self.x_data[idx]
+        y = self.y_data[idx]
+        return x, y
+
+
 def train(epoch):
 
     start = time.time()
 
-    transformer.train()
+    # transformer.train()
     transformer.cuda()
     trained_samples = 0
     
@@ -44,11 +58,9 @@ def train(epoch):
 
         # labels = labels.to(torch.int64)
         # labels = labels.cuda()
-        ### PascalVOC ###
         labels = labels.argmax(dim=1)
         labels = labels.type('torch.LongTensor').cuda()
 
-        # print('train outputs : ', outputs.shape)
         loss = loss_function(outputs, labels)
         
         optimizer.zero_grad()
@@ -69,12 +81,12 @@ def train(epoch):
         writer.add_scalar('Train/loss', loss.item(), n_iter)
 
         if epoch <= args.warm:
-            warmup_scheduler.step()
+            optimizer.step()
             
-    # for name, param in transformer.named_parameters():
-    #     layer, attr = os.path.splitext(name)
-    #     attr = attr[1:]
-    #     writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
+    for name, param in transformer.named_parameters():
+        layer, attr = os.path.splitext(name)
+        attr = attr[1:]
+        writer.add_histogram("{}/{}".format(layer, attr), param, epoch)
         
     finish = time.time()
     
@@ -88,22 +100,17 @@ def eval_training(epoch=0, tb=True):
 
     test_loss = 0.0
     correct = 0.0
-    correct_1 = 0.0
-    correct_5 = 0.0
 
     for (feat, labels) in test_loader:
 
         feat = feat.cuda()
+        
         outputs = transformer(feat)
         
         # labels = labels.to(torch.int64)
         # labels = labels.cuda()
-        ### PascalVOC ###
         labels = labels.argmax(dim=1)
         labels = labels.type('torch.LongTensor').cuda()
-
-        # print(outputs)
-        # print(labels)
 
         loss = loss_function(outputs, labels)
         
@@ -111,13 +118,10 @@ def eval_training(epoch=0, tb=True):
         _, preds = outputs.max(1)
         correct += preds.eq(labels).sum()
 
-        _, pred = outputs.topk(5, 1, largest=True, sorted=True)
-        label = labels.view(labels.size(0), -1).expand_as(pred)
-        corrects = pred.eq(label).float()
-        correct_5 += corrects[:, :5].sum()
-        correct_1 += corrects[:, :1].sum()
-
     finish = time.time()
+    if args.gpu:
+        print('GPU INFO.....')
+        print(torch.cuda.memory_summary(), end='')
 
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
@@ -128,8 +132,6 @@ def eval_training(epoch=0, tb=True):
         correct.float() / test_loader.__len__(),
         finish - start)
     )
-    print("Top 1 correct: ", correct_1 / len(test_loader.dataset))
-    print("Top 5 correct: ", correct_5 / len(test_loader.dataset))
     print()
 
     if tb:
@@ -144,16 +146,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=True, help='use gpu or not')
-    # parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
-    parser.add_argument('-warm', type=int, default=1, help='warm up training phase')    
+    parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
+    parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     args = parser.parse_args()
     
-    if args.net == 'resnet34':
-        # d_key, d_value, d_model, d_inner, n_head, dropout = 256, 256, 2048, 2048, 8, 0.1
-        d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 768, 2048, 8, 0.1
-    else:
+    # d_key, d_value, d_model, d_inner, n_head, dropout = 256, 256, 2048, 2048, 8, 0.1
+    # d_key, d_value, d_model, d_inner, n_head, dropout = 1025, 1025, 2050, 512, 2, 0.1
+    if args.net == 'conv':
         d_key, d_value, d_model, d_inner, n_head, dropout = 64, 64, 256, 256, 4, 0.1
+        # d_key, d_value, d_model, d_inner, n_head, dropout = 512, 512, 2048, 2048, 4, 0.1
+        # d_key, d_value, d_model, d_inner, n_head, dropout = 257, 257, 514, 514, 2, 0.1
 
     print(d_key, d_value, d_model, d_inner, n_head, dropout)
 
@@ -168,34 +171,41 @@ if __name__ == '__main__':
         d_inner=d_inner,
         dropout=dropout,
     )
-    
-    ### CIFAR-100
-    
+
+    ## CIFAR-100
+
     # cifar100_train_loader = get_cifar100_train_dataloader(
     #     settings.CIFAR100_TRAIN_MEAN,
     #     settings.CIFAR100_TRAIN_STD,
     #     num_workers=4,
-    #     batch_size=128,
+    #     batch_size=64,
     # )
 
     # cifar100_test_loader = get_cifar100_test_dataloader(
     #     settings.CIFAR100_TRAIN_MEAN,
     #     settings.CIFAR100_TRAIN_STD,
     #     num_workers=4,
-    #     batch_size=128,
+    #     batch_size=64,
     # )
+
+    # print("[Train]  len(X):", len(X_train), "len(Y):", len(Y_train))
+    # train_dataset = FeatureDataset(X_train, Y_train)
+    
+    # print("[Test]  len(X):", len(X_test), "len(Y):", len(Y_test))
+    # test_dataset = FeatureDataset(X_test, Y_test)
     
     # train_loader = cifar100_train_loader
     # test_loader = cifar100_test_loader
-
-    ### Pascal VOC
+    
+    
+    ## Pascal VOC
     
     data_dir = './data/'
     download_data=False
     # Imagnet values
     mean=[0.457342265910642, 0.4387686270106377, 0.4073427106250871]
     std=[0.26753769276329037, 0.2638145880487105, 0.2776826934044154]
-    transformations = transforms.Compose([transforms.Resize((224, 224)),
+    transformations = transforms.Compose([transforms.Resize((300, 300)),
 #                                      transforms.RandomChoice([
 #                                              transforms.CenterCrop(300),
 #                                              transforms.RandomResizedCrop(300, scale=(0.80, 1.0)),
@@ -210,8 +220,8 @@ if __name__ == '__main__':
                                       transforms.Normalize(mean = mean, std = std),
                                       ])
         
-    transformations_valid = transforms.Compose([transforms.Resize((224, 224)), 
-                                        #   transforms.CenterCrop(224), 
+    transformations_valid = transforms.Compose([transforms.Resize(330), 
+                                          transforms.CenterCrop(300), 
                                           transforms.ToTensor(), 
                                           transforms.Normalize(mean = mean, std = std),
                                           ])
@@ -223,7 +233,7 @@ if __name__ == '__main__':
                                       transform=transformations, 
                                       target_transform=encode_labels)
     
-    train_loader = DataLoader(dataset_train, batch_size=32, num_workers=4, shuffle=True)
+    train_loader = DataLoader(dataset_train, batch_size=args.b, num_workers=4, shuffle=True)
     
     dataset_test = PascalVOC_Dataset(data_dir,
                                       year='2012', 
@@ -232,20 +242,17 @@ if __name__ == '__main__':
                                       transform=transformations_valid, 
                                       target_transform=encode_labels)
     
-    test_loader = DataLoader(dataset_test, batch_size=32, num_workers=4)
-    
-    ###
+    test_loader = DataLoader(dataset_test, batch_size=args.b, num_workers=4)
 
     loss_function = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
-    optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
+    # loss_function = nn.MSELoss()
+    optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
+    # iter_per_epoch = len(X_train)
     iter_per_epoch = train_loader.__len__()
     checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
-    warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
-
+    
     writer = SummaryWriter(log_dir=os.path.join(
-        settings.LOG_DIR, 'resnet34_transformer', settings.TIME_NOW
+        settings.LOG_DIR, 'convblock', settings.TIME_NOW
     ))
 
     if not os.path.exists(checkpoint_path):
@@ -255,21 +262,18 @@ if __name__ == '__main__':
     best_acc = 0.0
     
     for epoch in range(1, settings.EPOCH + 1):
-        if epoch > args.warm:
-            train_scheduler.step(epoch)
-
         train(epoch)
         acc = eval_training(epoch)
         
         if epoch > settings.MILESTONES[1] and best_acc < acc:
-            weights_path = checkpoint_path.format(transformer='resnet34_transformer', epoch=epoch, type='best')
+            weights_path = checkpoint_path.format(transformer='transformer', epoch=epoch, type='best')
             print('saving weights file to {}'.format(weights_path))
             torch.save(transformer.state_dict(), weights_path)
             best_acc = acc
             continue
         
         if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(transformer='resnet34_transformer', epoch=epoch, type='regular')
+            weights_path = checkpoint_path.format(transformer='transformer', epoch=epoch, type='regular')
             print('saving weights file to {}'.format(weights_path))
             torch.save(transformer.state_dict(), weights_path)
             

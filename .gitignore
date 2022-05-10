@@ -1,4 +1,5 @@
 *.pth
+*.ipynb
 
 /runs
 /data
