@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-weights', type=str, required=False, help='the weights file you want to test')
     parser.add_argument('-gpu', action='store_true', default=True, help='use gpu or not')
-    parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
     parser.add_argument('-f', action='store_true', default=False, help='output features')
     args = parser.parse_args()
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
         print(outputs.shape)
         
         ## saving cifar100 features ([10000, 2048])
-        np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
+        # np.save( os.path.join(OUTPUT_DIR, 'cifar100_features.npy'), np.array(outputs))
 
     else:
         print(net)
