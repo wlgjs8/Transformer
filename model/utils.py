@@ -13,6 +13,7 @@ import torchvision.transforms as transforms
 
 # from torchvision.transforms import transform_COCO
 from torch.utils.data import DataLoader, Dataset
+from config import settings
 
 from resnet import resnet18, resnet34, resnet50, resnet101, conv_blocks
 
@@ -80,6 +81,61 @@ def get_cifar100_test_dataloader(mean, std, batch_size=64, num_workers=4, shuffl
         cifar100_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
     return cifar100_test_loader
+
+
+### Pascal VOC
+def get_PascalVOC2012_train_dataloader(batch_size=64, num_workers=4, shuffle=True):
+    
+    transform_train = transforms.Compose([transforms.Resize((224, 224)),
+                                    transforms.RandomChoice([
+                                        transforms.ColorJitter(brightness=(0.80, 1.20)),
+                                        transforms.RandomGrayscale(p = 0.25)
+                                        ]),
+                                    transforms.RandomHorizontalFlip(p = 0.25),
+                                    transforms.RandomRotation(25),
+                                    transforms.ToTensor(), 
+                                    transforms.Normalize(
+                                        mean = settings.PASCAL_TRAIN_MEAN, 
+                                        std = settings.PASCAL_TRAIN_STD),
+                                    ])
+
+    pascal_training = PascalVOC_Dataset(
+        root='./data', 
+        year='2012', 
+        image_set='train', 
+        download=False, 
+        transform=transform_train,
+        target_transform=encode_labels
+    )
+
+    pascal_training_loader = DataLoader(
+        pascal_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
+
+    return pascal_training_loader
+
+
+def get_PascalVOC2012_test_dataloader(batch_size=64, num_workers=4, shuffle=True):
+
+    transform_test = transforms.Compose([transforms.Resize((224, 224)), 
+                                          transforms.ToTensor(), 
+                                          transforms.Normalize(
+                                            mean = settings.PASCAL_TRAIN_MEAN, 
+                                            std = settings.PASCAL_TRAIN_STD),
+                                    ])
+    
+    pascal_test = PascalVOC_Dataset(
+        root='./data', 
+        year='2012', 
+        image_set='val', 
+        download=False, 
+        transform=transform_test,
+        target_transform=encode_labels
+    )
+
+    pascal_test_loader = DataLoader(
+        pascal_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
+
+    return pascal_test_loader
 
 
 class CocoDataset(Dataset):

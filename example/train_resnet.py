@@ -18,7 +18,7 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, get_cifar100_train_dataloader, get_cifar100_test_dataloader, WarmUpLR, \
+from utils import get_network, WarmUpLR, get_PascalVOC2012_train_dataloader, get_PascalVOC2012_test_dataloader, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
 
@@ -26,19 +26,21 @@ def train(epoch):
 
     start = time.time()
     net.train()
-    for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+    for batch_index, (images, labels) in enumerate(pascal_train_loader):
 
-        if args.gpu:
-            labels = labels.cuda()
-            images = images.cuda()
+        images = images.cuda()
 
         optimizer.zero_grad()
         outputs = net(images)
+
+        labels = labels.argmax(dim=1)
+        labels = labels.type('torch.LongTensor').cuda()
+
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
 
-        n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
+        n_iter = (epoch - 1) * len(pascal_train_loader) + batch_index + 1
 
         last_layer = list(net.children())[-1]
         for name, para in last_layer.named_parameters():
@@ -52,7 +54,7 @@ def train(epoch):
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
+            total_samples=len(pascal_train_loader.dataset)
         ))
 
         #update training loss for each iteration
@@ -80,11 +82,11 @@ def eval_training(epoch=0, tb=True):
     test_loss = 0.0 # cost function error
     correct = 0.0
 
-    for (images, labels) in cifar100_test_loader:
+    for (images, labels) in pascal_test_loader:
 
-        if args.gpu:
-            images = images.cuda()
-            labels = labels.cuda()
+        images = images.cuda()
+        labels = labels.argmax(dim=1)
+        labels = labels.type('torch.LongTensor').cuda()
 
         outputs = net(images)
         loss = loss_function(outputs, labels)
@@ -94,71 +96,55 @@ def eval_training(epoch=0, tb=True):
         correct += preds.eq(labels).sum()
 
     finish = time.time()
-    if args.gpu:
-        print('GPU INFO.....')
-        print(torch.cuda.memory_summary(), end='')
+
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
-        test_loss / len(cifar100_test_loader.dataset),
-        correct.float() / len(cifar100_test_loader.dataset),
+        test_loss / len(pascal_test_loader.dataset),
+        correct.float() / len(pascal_test_loader.dataset),
         finish - start
     ))
     print()
 
     #add informations to tensorboard
     if tb:
-        writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
-        writer.add_scalar('Test/Accuracy', correct.float() / len(cifar100_test_loader.dataset), epoch)
+        writer.add_scalar('Test/Average loss', test_loss / len(pascal_test_loader.dataset), epoch)
+        writer.add_scalar('Test/Accuracy', correct.float() / len(pascal_test_loader.dataset), epoch)
 
-    return correct.float() / len(cifar100_test_loader.dataset)
+    return correct.float() / len(pascal_test_loader.dataset)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=True, help='use gpu or not')
-    parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=32, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
-    parser.add_argument('-resume', action='store_true', default=False, help='resume training')
     args = parser.parse_args()
 
     net = get_network(args)
 
     #data preprocessing:
-    cifar100_training_loader = get_cifar100_train_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+    pascal_train_loader = get_PascalVOC2012_train_dataloader(
         num_workers=4,
-        batch_size=args.b,
-        shuffle=True
+        batch_size=args.b
     )
-
-    cifar100_test_loader = get_cifar100_test_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+    pascal_test_loader = get_PascalVOC2012_test_dataloader(
         num_workers=4,
-        batch_size=args.b,
-        shuffle=True
+        batch_size=args.b
     )
 
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2)
-    iter_per_epoch = len(cifar100_training_loader)
+    iter_per_epoch = len(pascal_train_loader)
+    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
-    # if args.resume:
-    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
-    
     writer = SummaryWriter(log_dir=os.path.join(
         settings.LOG_DIR, args.net, settings.TIME_NOW
     ))
-    input_tensor = torch.Tensor(1, 3, 32, 32)
-    if args.gpu:
-        input_tensor = input_tensor.cuda()
-    writer.add_graph(net, input_tensor)
 
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
