@@ -19,8 +19,8 @@ sys.path.append('.')
 sys.path.append('model')
 
 from config import settings
-from utils import get_network, CocoDataset, WarmUpLR, get_cifar100_train_dataloader, get_cifar100_test_dataloader, \
-    most_recent_folder, most_recent_weights, last_epoch, best_acc_weights, encode_labels, PascalVOC_Dataset
+from utils import get_network, WarmUpLR, get_PascalVOC2012_train_dataloader, get_PascalVOC2012_test_dataloader, \
+    most_recent_folder, most_recent_weights, last_epoch, best_acc_weights, encode_labels
 
 from model.optim import ScheduledOptim
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=True, help='use gpu or not')
-    # parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=32, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')    
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     args = parser.parse_args()
@@ -169,75 +169,16 @@ if __name__ == '__main__':
         dropout=dropout,
     )
     
-    ### CIFAR-100
-    
-    # cifar100_train_loader = get_cifar100_train_dataloader(
-    #     settings.CIFAR100_TRAIN_MEAN,
-    #     settings.CIFAR100_TRAIN_STD,
-    #     num_workers=4,
-    #     batch_size=128,
-    # )
-
-    # cifar100_test_loader = get_cifar100_test_dataloader(
-    #     settings.CIFAR100_TRAIN_MEAN,
-    #     settings.CIFAR100_TRAIN_STD,
-    #     num_workers=4,
-    #     batch_size=128,
-    # )
-    
-    # train_loader = cifar100_train_loader
-    # test_loader = cifar100_test_loader
-
-    ### Pascal VOC
-    
-    data_dir = './data/'
-    download_data=False
-    # Imagnet values
-    mean=[0.457342265910642, 0.4387686270106377, 0.4073427106250871]
-    std=[0.26753769276329037, 0.2638145880487105, 0.2776826934044154]
-    transformations = transforms.Compose([transforms.Resize((224, 224)),
-#                                      transforms.RandomChoice([
-#                                              transforms.CenterCrop(300),
-#                                              transforms.RandomResizedCrop(300, scale=(0.80, 1.0)),
-#                                              ]),                                      
-                                      transforms.RandomChoice([
-                                          transforms.ColorJitter(brightness=(0.80, 1.20)),
-                                          transforms.RandomGrayscale(p = 0.25)
-                                          ]),
-                                      transforms.RandomHorizontalFlip(p = 0.25),
-                                      transforms.RandomRotation(25),
-                                      transforms.ToTensor(), 
-                                      transforms.Normalize(mean = mean, std = std),
-                                      ])
-        
-    transformations_valid = transforms.Compose([transforms.Resize((224, 224)), 
-                                        #   transforms.CenterCrop(224), 
-                                          transforms.ToTensor(), 
-                                          transforms.Normalize(mean = mean, std = std),
-                                          ])
-    
-    dataset_train = PascalVOC_Dataset(data_dir,
-                                      year='2012', 
-                                      image_set='train', 
-                                      download=download_data, 
-                                      transform=transformations, 
-                                      target_transform=encode_labels)
-    
-    train_loader = DataLoader(dataset_train, batch_size=32, num_workers=4, shuffle=True)
-    
-    dataset_test = PascalVOC_Dataset(data_dir,
-                                      year='2012', 
-                                      image_set='val', 
-                                      download=download_data, 
-                                      transform=transformations_valid, 
-                                      target_transform=encode_labels)
-    
-    test_loader = DataLoader(dataset_test, batch_size=32, num_workers=4)
-    
-    ###
+    train_loader = get_PascalVOC2012_train_dataloader(
+        num_workers=4,
+        batch_size=args.b
+    )
+    test_loader = get_PascalVOC2012_test_dataloader(
+        num_workers=4,
+        batch_size=args.b
+    )
 
     loss_function = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09)
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
     iter_per_epoch = train_loader.__len__()
@@ -262,14 +203,14 @@ if __name__ == '__main__':
         acc = eval_training(epoch)
         
         if epoch > settings.MILESTONES[1] and best_acc < acc:
-            weights_path = checkpoint_path.format(transformer='resnet34_transformer', epoch=epoch, type='best')
+            weights_path = checkpoint_path.format(transformer='resnet34', epoch=epoch, type='best')
             print('saving weights file to {}'.format(weights_path))
             torch.save(transformer.state_dict(), weights_path)
             best_acc = acc
             continue
         
         if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(transformer='resnet34_transformer', epoch=epoch, type='regular')
+            weights_path = checkpoint_path.format(transformer='resnet34', epoch=epoch, type='regular')
             print('saving weights file to {}'.format(weights_path))
             torch.save(transformer.state_dict(), weights_path)
             

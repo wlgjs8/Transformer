@@ -57,7 +57,7 @@ class BottleNeck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, num_block, num_classes=100):
+    def __init__(self, block, num_block, num_classes=20):
         super().__init__()
 
         self.in_channels = 64
@@ -71,8 +71,8 @@ class ResNet(nn.Module):
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
         self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
-        # self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        # self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
 
@@ -91,9 +91,9 @@ class ResNet(nn.Module):
         output = self.conv4_x(output)
         output = self.conv5_x(output)
 
-        # output = self.avg_pool(output)
-        # output = output.view(output.size(0), -1)
-        # output = self.fc(output)
+        output = self.avg_pool(output)
+        output = output.view(output.size(0), -1)
+        output = self.fc(output)
 
         return output
 
